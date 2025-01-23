@@ -40,7 +40,16 @@
 #define ADC_ATTEN_11db ADC_ATTEN_DB_11
 #define ADC_WIDTH_12Bit ADC_BITWIDTH_12
 #define ADC_WIDTH_13Bit ADC_BITWIDTH_13
+#include "esp_adc_cal_internal_legacy.h"  // For ESP-IDF 5.x and above
+#else
+#include "esp_adc_cal.h"  // For ESP-IDF 4.x and below
 #endif
+
+//#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0))
+//#define ADC_ATTEN_11db ADC_ATTEN_DB_11
+//#define ADC_WIDTH_12Bit ADC_BITWIDTH_12
+//#define ADC_WIDTH_13Bit ADC_BITWIDTH_13
+//#endif
 
 #define V_REF                           1100
 

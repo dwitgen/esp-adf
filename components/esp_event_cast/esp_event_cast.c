@@ -37,13 +37,13 @@ static const char *TAG = "EVT_CAST";
 
 typedef struct esp_evt_cast_item {
     STAILQ_ENTRY(esp_evt_cast_item)     next;
-    xQueueHandle                        que;
+    QueueHandle_t                        que;
 } esp_evt_cast_item_t;
 
 typedef STAILQ_HEAD(esp_event_cast_list, esp_evt_cast_item) esp_event_cast_list_t;
 
 typedef struct esp_event_cast {
-    xSemaphoreHandle        _mux;
+    SemaphoreHandle_t        _mux;
     esp_event_cast_list_t   evt_list;
 } esp_event_cast_t;
 
@@ -75,7 +75,7 @@ esp_err_t esp_event_cast_destroy(esp_event_cast_handle_t handle)
     return ESP_FAIL;
 }
 
-esp_err_t esp_event_cast_register(esp_event_cast_handle_t handle, xQueueHandle que)
+esp_err_t esp_event_cast_register(esp_event_cast_handle_t handle, QueueHandle_t que)
 {
     if ((handle == NULL) || (que == NULL)) {
         ESP_LOGE(TAG, "func:%s, invalid parameters, handle=%p, que=%p", __func__, handle, que);

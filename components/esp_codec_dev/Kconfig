@@ -1,7 +1,6 @@
 menu "Audio Codec Device Configuration"
    config ESP_IDF_VERSION
         string "ESP-IDF Version"
-        option env="ESP_IDF_VERSION"
         default "5.1.5"
        
     config CODEC_I2C_BACKWARD_COMPATIBLE

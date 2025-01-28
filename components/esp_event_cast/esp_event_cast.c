@@ -92,7 +92,7 @@ esp_err_t esp_event_cast_register(esp_event_cast_handle_t handle, QueueHandle_t 
     return ESP_OK;
 }
 
-esp_err_t esp_event_cast_unregister(esp_event_cast_handle_t handle, xQueueHandle que)
+esp_err_t esp_event_cast_unregister(esp_event_cast_handle_t handle, QueueHandle_t que)
 {
     if ((handle == NULL) || (que == NULL)) {
         ESP_LOGE(TAG, "func:%s, invalid parameters, handle=%p, que=%p", __func__, handle, que);

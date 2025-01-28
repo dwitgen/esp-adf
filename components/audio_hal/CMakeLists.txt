@@ -34,7 +34,6 @@ set(COMPONENT_SRCS ./audio_hal.c
                     ./driver/es7210/es7210.c
                     ./driver/es7243e/es7243e.c
                     ./driver/tas5805m/tas5805m.c
-                    ./driver/es8311_debug.c
                     )
 
 IF (NOT ((CONFIG_IDF_TARGET STREQUAL "esp32c3") OR (CONFIG_IDF_TARGET STREQUAL "esp32c6")))

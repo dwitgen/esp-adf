@@ -3,7 +3,7 @@
 	url = https://github.com/espressif/esp-idf
 [submodule "components/esp-adf-libs"]
 	path = components/esp-adf-libs
-	url = https://github.com/dwitgen/esp-adf-libs
+	url = https://github.com/dwitgen/esp-adf-libs-fork
 	branch = master
 [submodule "components/esp-sr"]
 	path = components/esp-sr

@@ -68,7 +68,7 @@ typedef struct wifi_setting_item {
 typedef STAILQ_HEAD(wifi_setting_list, wifi_setting_item) wifi_setting_list_t;
 
 typedef struct {
-    xQueueHandle                     wifi_serv_que;
+    QueueHandle_t                     wifi_serv_que;
     wifi_service_event_t             wifi_serv_state;
     wifi_config_t                    info;
     wifi_setting_list_t              setting_list;

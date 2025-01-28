@@ -1,7 +1,7 @@
 menu "Audio Codec Device Configuration"
    config ESP_IDF_VERSION
         string "ESP-IDF Version"
-        default "5.1.5"
+        default "5.1"
        
     config CODEC_I2C_BACKWARD_COMPATIBLE
         bool "Enable backward compatibility for the I2C driver (force use of the old i2c_driver above v5.3)"

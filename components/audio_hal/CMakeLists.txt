@@ -18,8 +18,8 @@ IF (NOT ((CONFIG_IDF_TARGET STREQUAL "esp32c3") OR (CONFIG_IDF_TARGET STREQUAL "
 endif()
 
 # Edit following two lines to set component requirements (see docs)
-set(COMPONENT_REQUIRES )
-set(COMPONENT_PRIV_REQUIRES audio_sal audio_board mbedtls esp_peripherals display_service esp_dispatcher)
+set(COMPONENT_REQUIRES esp_peripherals)
+set(COMPONENT_PRIV_REQUIRES audio_sal audio_board mbedtls display_service esp_dispatcher)
 
 set(COMPONENT_SRCS ./audio_hal.c
                     ./audio_volume.c

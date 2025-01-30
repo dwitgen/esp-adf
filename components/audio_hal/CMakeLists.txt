@@ -53,4 +53,3 @@ IF (NOT ((CONFIG_IDF_TARGET STREQUAL "esp32c3") OR (CONFIG_IDF_TARGET STREQUAL "
     target_link_libraries(${COMPONENT_TARGET} INTERFACE "-L${CMAKE_CURRENT_LIST_DIR}/driver/zl38063/firmware")
     target_link_libraries(${COMPONENT_TARGET} INTERFACE firmware)
 ENDIF()
-

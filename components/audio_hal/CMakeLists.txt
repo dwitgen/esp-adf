@@ -15,7 +15,9 @@ IF (NOT ((CONFIG_IDF_TARGET STREQUAL "esp32c3") OR (CONFIG_IDF_TARGET STREQUAL "
     ./driver/zl38063/api_lib
     ./driver/zl38063/example_apps
     ./driver/zl38063/firmware)
+    
 endif()
+
 
 # Edit following two lines to set component requirements (see docs)
 set(COMPONENT_REQUIRES esp_peripherals)

@@ -561,7 +561,7 @@ static void pwm_wait_flush(void)
     audio_pwm_handle_t handle = g_audio_pwm_handle;
     uint32_t data_size = pwm_data_list_get_count(handle->data);
     if (handle->status == AUDIO_PWM_STATUS_BUSY && data_size > 0) {
-        pwm_data_list_wait_flushed(handle->data, pwm_get_data_duration(data_size) / portTICK_RATE_MS);
+        pwm_data_list_wait_flushed(handle->data, pwm_get_data_duration(data_size) / portTICK_PERIOD_MS);
     }
 }
 
@@ -669,7 +669,7 @@ static esp_err_t _pwm_open(audio_element_handle_t self)
     if (pwm->is_open) {
         return ESP_OK;
     }
-    res = audio_element_set_input_timeout(self, 2000 / portTICK_RATE_MS);
+    res = audio_element_set_input_timeout(self, 2000 / portTICK_PERIOD_MS);
     pwm->is_open = true;
     return res;
 }

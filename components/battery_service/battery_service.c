@@ -35,7 +35,7 @@
 #include "battery_service.h"
 
 typedef struct battery_service {
-    xQueueHandle serv_q;
+    QueueHandle_t serv_q;
     EventGroupHandle_t sync_events;
 
     vol_monitor_handle_t vol_monitor;

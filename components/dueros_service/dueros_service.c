@@ -78,6 +78,7 @@ typedef enum {
     DUER_CMD_WIFI_ST_REPORT,
 } duer_task_cmd_t;
 
+
 typedef struct {
     bool                    login;
     QueueHandle_t           duer_que;

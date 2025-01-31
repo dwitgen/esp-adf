@@ -37,7 +37,7 @@ static const char *TAG = "EVT_CAST";
 
 typedef struct esp_evt_cast_item {
     STAILQ_ENTRY(esp_evt_cast_item)     next;
-    QueueHandle_t                        que;
+    QueueHandle_t                       que;
 } esp_evt_cast_item_t;
 
 typedef STAILQ_HEAD(esp_event_cast_list, esp_evt_cast_item) esp_event_cast_list_t;

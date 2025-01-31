@@ -66,7 +66,7 @@ struct audio_pipeline {
     audio_element_list_t        el_list;
     ringbuf_list_t              rb_list;
     audio_element_state_t       state;
-    xSemaphoreHandle            lock;
+    SemaphoreHandle_t            lock;
     bool                        linked;
     audio_event_iface_handle_t  listener;
 };

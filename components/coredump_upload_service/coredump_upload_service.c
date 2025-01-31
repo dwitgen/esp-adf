@@ -49,7 +49,7 @@
 #endif
 
 typedef struct {
-    xQueueHandle cmd_q;
+    QueueHandle_t cmd_q;
     EventGroupHandle_t sync_evt;
     bool (*do_post)(char *url, uint8_t *data, size_t len);
 } coredump_upload_t;

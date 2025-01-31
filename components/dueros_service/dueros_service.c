@@ -77,7 +77,7 @@ typedef enum {
     DUER_CMD_WIFI_CFG_STOP,
     DUER_CMD_WIFI_ST_REPORT,
 } duer_task_cmd_t;
-
+// comment to remove possible eol issue
 typedef struct {
     bool                    login;
     QueueHandle_t            duer_que;

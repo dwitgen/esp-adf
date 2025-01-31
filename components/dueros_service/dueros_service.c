@@ -80,7 +80,7 @@ typedef enum {
 
 typedef struct {
     bool                    login;
-    QueueHandle_t            duer_que;
+    QueueHandle_t           duer_que;
     service_state_t         duer_state;
     EventGroupHandle_t      duer_evt;
 } dueros_service_t;

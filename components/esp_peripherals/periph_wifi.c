@@ -279,7 +279,7 @@ esp_err_t periph_wifi_config_wait_done(esp_periph_handle_t periph, TickType_t ti
     return ESP_FAIL;
 }
 
-static void wifi_reconnect_timer(xTimerHandle tmr)
+static void wifi_reconnect_timer(TimerHandle_t tmr)
 {
     esp_periph_handle_t periph = (esp_periph_handle_t)pvTimerGetTimerID(tmr);
     periph_wifi_handle_t periph_wifi = (periph_wifi_handle_t)esp_periph_get_data(periph);

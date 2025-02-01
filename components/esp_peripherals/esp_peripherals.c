@@ -54,7 +54,7 @@ struct esp_periph {
 
 typedef struct esp_periph_sets {
     EventGroupHandle_t                              state_event_bits;
-    xSemaphoreHandle                                lock;
+    SemaphoreHandle_t                               lock;
     int                                             task_stack;
     int                                             task_prio;
     int                                             task_core;

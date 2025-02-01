@@ -136,7 +136,7 @@ static periph_led_channel_t *_find_led_channel(periph_led_t *periph_led, int gpi
     return ch;
 }
 
-static void led_timer_handler(xTimerHandle tmr)
+static void led_timer_handler(TimerHandle_t tmr)
 {
     esp_periph_handle_t periph = (esp_periph_handle_t) pvTimerGetTimerID(tmr);
 

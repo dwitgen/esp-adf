@@ -44,7 +44,7 @@ typedef enum {
 
 typedef struct {
     int state;
-    xQueueHandle srv_q;
+    QueueHandle_t srv_q;
     ota_upgrade_ops_t *upgrade_list;
     int list_len;
     int result;

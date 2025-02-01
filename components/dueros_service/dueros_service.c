@@ -60,27 +60,27 @@
 #define DUER_EVT_WIFI_ST_REPORT     (BIT3)
 
 #define RECORD_DEBUG                0
-// Comment to text patch
+
 static const char *TAG = "DUEROS";
-
+//
 typedef enum {
-    DUER_CMD_UNKNOWN,
-    DUER_CMD_LOGIN,
-    DUER_CMD_CONNECTED,
-    DUER_CMD_START,
-    DUER_CMD_STOP,
-    DUER_CMD_QUIT,
-    DUER_CMD_UPLOAD,
-    DUER_CMD_CANCEL,
-    DUER_CMD_DESTROY,
-    DUER_CMD_WIFI_CFG_START,
-    DUER_CMD_WIFI_CFG_STOP,
-    DUER_CMD_WIFI_ST_REPORT,
+    DUER_CMD_UNKNOWN, //
+    DUER_CMD_LOGIN, //
+    DUER_CMD_CONNECTED, //
+    DUER_CMD_START, //
+    DUER_CMD_STOP, //
+    DUER_CMD_QUIT, //
+    DUER_CMD_UPLOAD, //
+    DUER_CMD_CANCEL, //
+    DUER_CMD_DESTROY, //
+    DUER_CMD_WIFI_CFG_START, //
+    DUER_CMD_WIFI_CFG_STOP, //
+    DUER_CMD_WIFI_ST_REPORT, //
 } duer_task_cmd_t;
-
+//
 typedef struct {
     bool                    login;
-    QueueHandle_t            duer_que;
+    QueueHandle_t           duer_que;
     service_state_t         duer_state;
     EventGroupHandle_t      duer_evt;
 } dueros_service_t;

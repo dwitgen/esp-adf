@@ -65,7 +65,7 @@ static esp_err_t _touch_run(esp_periph_handle_t self, audio_event_iface_msg_t *m
     return ESP_OK;
 }
 
-static void touch_timer_handler(xTimerHandle tmr)
+static void touch_timer_handler(TimerHandle_t tmr)
 {
     esp_periph_handle_t periph = (esp_periph_handle_t) pvTimerGetTimerID(tmr);
 

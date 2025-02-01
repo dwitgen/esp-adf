@@ -60,7 +60,7 @@
 #define DUER_EVT_WIFI_ST_REPORT     (BIT3)
 
 #define RECORD_DEBUG                0
-
+// Comment to text patch
 static const char *TAG = "DUEROS";
 
 typedef enum {

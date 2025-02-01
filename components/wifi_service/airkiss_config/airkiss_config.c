@@ -348,7 +348,7 @@ static void airkiss_send_ack_task(void *pvParameters)
                 }
             }
         } else {
-            vTaskDelay((portTickType) (100 / portTICK_PERIOD_MS));
+            vTaskDelay((TickType_t) (100 / portTICK_PERIOD_MS));
         }
     }
 

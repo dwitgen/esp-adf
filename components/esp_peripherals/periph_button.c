@@ -82,7 +82,7 @@ static void IRAM_ATTR button_intr_handler(void* param)
     esp_periph_send_cmd_from_isr(periph, 0, NULL, 0);
 }
 
-static void button_timer_handler(xTimerHandle tmr)
+static void button_timer_handler(TimerHandle_t tmr)
 {
     esp_periph_handle_t periph = (esp_periph_handle_t) pvTimerGetTimerID(tmr);
     esp_periph_send_cmd_from_isr(periph, 0, NULL, 0);
@@ -102,7 +102,7 @@ static esp_err_t _button_init(esp_periph_handle_t self)
     };
     periph_btn->btn = button_init(&btn_config);
 
-    esp_periph_start_timer(self, 50/portTICK_RATE_MS, button_timer_handler);
+    esp_periph_start_timer(self, 50/portTICK_PERIOD_MS, button_timer_handler);
     return ret;
 }
 

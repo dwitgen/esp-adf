@@ -373,22 +373,14 @@ static void button_task(void *parameters)
     adc_btn_list *head = tag->head;
     adc_btn_list *find = head;
     xEventGroupClearBits(g_event_bit, DESTROY_BIT);
-
-    // Legacy ADC configuration removed.
-    // It is assumed that ADC oneshot initialization (adc_oneshot_new_unit) and channel configuration
-    // (adc_oneshot_config_channel) have already been performed elsewhere.
-
-    // Reset buttons for each ADC channel node.
     while (find) {
         adc_arr_t *info = & (find->adc_info);
         reset_btn(find->btn_dscp, info->total_steps);
-        // Remove legacy configuration: adc1_config_channel_atten(info->adc_ch, ADC_ATTEN_11db);
         find = find->next;
     }
     find = head;
 
 #if defined ENABLE_ADC_VOLUME
-    // Remove legacy configuration: adc1_config_channel_atten(DIAL_adc_ch, ADC_ATTEN_11db);
     short adc_vol_prev = ADC_BTN_INVALID_ID;
     short adc_vol_cur = ADC_BTN_INVALID_ID;
     short internal_time_ms = DIAL_VOL_INTERVAL_TIME_MS / ADC_SAMPLE_INTERVAL_TIME_MS;  // e.g., 100ms

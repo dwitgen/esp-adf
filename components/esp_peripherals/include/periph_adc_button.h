@@ -37,6 +37,10 @@ extern "C" {
 #define ADC_BUTTON_TASK_PRIORITY        10
 #define ADC_BUTTON_TASK_CORE_ID         0
 
+typedef struct {
+    int act_id;  /*!< Action ID of the button */
+} periph_adc_button_event_t;
+
 /**
  * @brief      The configuration of ADC Button
  */

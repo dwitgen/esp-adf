@@ -35,6 +35,7 @@ typedef struct {
     int adc_channels;
     adc_btn_list *list;
     adc_btn_task_cfg_t task_cfg;
+    TaskHandle_t task_handle;
 } periph_adc_btn_t;
 
 static void btn_cb(void *user_data, int adc, int id, adc_btn_state_t state)
@@ -76,20 +77,22 @@ static esp_err_t _adc_button_init(esp_periph_handle_t self)
     AUDIO_NULL_CHECK(TAG, adc_btn, return ESP_FAIL);
 
     // Initialize ADC hardware here
-    esp_err_t ret = adc_button_adc_init(adc_btn->list->adc_ch);  // Pass the ADC channel
+    esp_err_t ret = adc_button_adc_init(adc_btn->list->adc_info.adc_ch);  // Fixed this line
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize ADC hardware");
         return ret;
     }
 
-    // Continue with existing initialization...
-    xTaskCreatePinnedToCore(_adc_button_task, "adc_button_task", 
-                            adc_btn->task_cfg.stack_size,
-                            self, adc_btn->task_cfg.task_prio,
-                            &adc_btn->task_handle, 
+    // Start button task
+    xTaskCreatePinnedToCore(button_task, "adc_button_task",  // Changed to button_task
+                            adc_btn->task_cfg.task_stack,    // Fixed: task_stack instead of stack_size
+                            self,
+                            adc_btn->task_cfg.task_prio,
+                            &adc_btn->task_handle,           // task_handle added to struct
                             adc_btn->task_cfg.task_core);
     return ESP_OK;
 }
+
 
 
 esp_periph_handle_t periph_adc_button_init(periph_adc_button_cfg_t *config)

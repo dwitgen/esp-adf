@@ -194,7 +194,7 @@ static bool adc_calibration_init(adc_unit_t unit, adc_channel_t channel, adc_att
 /*---------------------------------------------------------------
         ADC Initialization for Button Module
 ---------------------------------------------------------------*/
-static esp_err_t adc_button_adc_init(adc_channel_t channel)
+esp_err_t adc_button_adc_init(adc_channel_t channel)
 {
     adc_oneshot_unit_init_cfg_t init_config = {
         .unit_id = ADC_UNIT_1,

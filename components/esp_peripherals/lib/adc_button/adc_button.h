@@ -91,7 +91,7 @@ esp_err_t adc_button_adc_init(adc_channel_t channel);
 
 void adc_btn_delete_task(void);
 
-static void button_task(void *parameters);
+void button_task(void *parameters);
 
 #ifdef __cplusplus
 }

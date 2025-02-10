@@ -365,8 +365,7 @@ static adc_btn_state_t get_adc_btn_state(int adc_value, int act_id, adc_btn_list
     }
     return st;
 }
-
-static void button_task(void *parameters)
+void button_task(void *parameters)
 {
     _task_flag = true;
     adc_btn_tag_t *tag = (adc_btn_tag_t *)parameters;

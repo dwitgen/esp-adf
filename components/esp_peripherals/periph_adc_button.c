@@ -26,6 +26,7 @@
 #include "esp_log.h"
 #include "audio_error.h"
 #include "periph_adc_button.h"
+#include "adc_button.h"
 #include "audio_mem.h"
 
 static const char *TAG = "PERIPH_ADC_BUTTON";

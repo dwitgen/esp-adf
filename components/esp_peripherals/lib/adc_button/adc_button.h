@@ -30,6 +30,7 @@ extern "C" {
 #endif
 
 #include "esp_err.h"
+#include <stdbool.h>
 
 typedef enum {
     USER_KEY_ID0,

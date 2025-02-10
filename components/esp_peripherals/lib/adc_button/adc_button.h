@@ -85,6 +85,8 @@ void adc_btn_init(void *user_data, adc_button_callback cb, adc_btn_list *head, a
 adc_btn_list *adc_btn_create_list(adc_arr_t *adc_conf, int channels);
 
 esp_err_t adc_btn_destroy_list(adc_btn_list *head);
+ 
+esp_err_t adc_button_adc_init(adc_channel_t channel);
 
 void adc_btn_delete_task(void);
 

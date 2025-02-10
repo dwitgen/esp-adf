@@ -62,12 +62,34 @@ static esp_err_t _adc_button_destroy(esp_periph_handle_t self)
     return ESP_OK;
 }
 
+//static esp_err_t _adc_button_init(esp_periph_handle_t self)
+//{
+//    periph_adc_btn_t *periph_adc_btn = esp_periph_get_data(self);
+//    adc_btn_init((void *)self, btn_cb, periph_adc_btn->list, &periph_adc_btn->task_cfg);
+//    return ESP_OK;
+//}
+
 static esp_err_t _adc_button_init(esp_periph_handle_t self)
 {
-    periph_adc_btn_t *periph_adc_btn = esp_periph_get_data(self);
-    adc_btn_init((void *)self, btn_cb, periph_adc_btn->list, &periph_adc_btn->task_cfg);
+    periph_adc_btn_t *adc_btn = esp_periph_get_data(self);
+    AUDIO_NULL_CHECK(TAG, adc_btn, return ESP_FAIL);
+
+    // Initialize ADC hardware here
+    esp_err_t ret = adc_button_adc_init(adc_btn->list->adc_ch);  // Pass the ADC channel
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to initialize ADC hardware");
+        return ret;
+    }
+
+    // Continue with existing initialization...
+    xTaskCreatePinnedToCore(_adc_button_task, "adc_button_task", 
+                            adc_btn->task_cfg.stack_size,
+                            self, adc_btn->task_cfg.task_prio,
+                            &adc_btn->task_handle, 
+                            adc_btn->task_cfg.task_core);
     return ESP_OK;
 }
+
 
 esp_periph_handle_t periph_adc_button_init(periph_adc_button_cfg_t *config)
 {

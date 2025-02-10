@@ -31,6 +31,7 @@ extern "C" {
 
 #include "esp_err.h"
 #include <stdbool.h>
+#include "esp_adc/adc_oneshot.h"
 
 typedef enum {
     USER_KEY_ID0,

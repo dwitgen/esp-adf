@@ -53,8 +53,8 @@ typedef struct {
 #define PERIPH_ADC_BUTTON_DEFAULT_CONFIG() {   \
     .task_cfg = {                              \
         .task_stack = ADC_BUTTON_STACK_SIZE,   \
-        .task_core  = ADC_BUTTON_TASK_CORE_ID, \
         .task_prio  = ADC_BUTTON_TASK_PRIORITY,\
+        .task_core  = ADC_BUTTON_TASK_CORE_ID, \
         .ext_stack  = false                    \
     }                                          \
 }

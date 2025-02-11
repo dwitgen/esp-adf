@@ -365,12 +365,75 @@ static adc_btn_state_t get_adc_btn_state(int adc_value, int act_id, adc_btn_list
     }
     return st;
 }
-void button_task(void *params) {
-    ESP_LOGI("BUTTON_TASK", "Minimal task started.");
-    while (1) {
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+void button_task(void *parameters) {
+    ESP_LOGI("BUTTON_TASK", "Task started.");
+
+    if (parameters == NULL) {
+        ESP_LOGE("BUTTON_TASK", "Received NULL parameters!");
+        vTaskDelete(NULL);
     }
+
+    adc_btn_tag_t *tag = (adc_btn_tag_t *)parameters;
+    if (tag == NULL || tag->head == NULL) {
+        ESP_LOGE("BUTTON_TASK", "Invalid tag or tag->head!");
+        vTaskDelete(NULL);
+    }
+
+    adc_btn_list *head = tag->head;
+    adc_btn_list *find = head;
+
+    while (find) {
+        if (find->btn_dscp == NULL) {
+            ESP_LOGE("BUTTON_TASK", "btn_dscp is NULL!");
+            vTaskDelete(NULL);
+        }
+        find = find->next;
+    }
+    find = head;
+
+    static adc_btn_state_t cur_state = ADC_BTN_STATE_ADC;
+    adc_btn_state_t btn_st = ADC_BTN_STATE_IDLE;
+    int cur_act_id = ADC_BTN_INVALID_ACT_ID;
+
+    while (1) {
+        find = head;
+        while (find) {
+            adc_arr_t *info = &(find->adc_info);
+            int act_id = ADC_BTN_INVALID_ACT_ID;
+
+            ESP_LOGI("BUTTON_TASK", "Reading ADC...");
+            int adc = get_adc_voltage(info->adc_ch);
+            ESP_LOGI("BUTTON_TASK", "ADC Value: %d", adc);
+
+            btn_decription *btn_dscp = find->btn_dscp;
+
+            for (int i = 0; i < info->total_steps; ++i) {
+                if (btn_dscp[i].active_id > ADC_BTN_INVALID_ID) {
+                    act_id = i;
+                    break;
+                }
+            }
+
+            btn_st = get_adc_btn_state(adc, act_id, find);
+            if (btn_st != ADC_BTN_STATE_IDLE && tag->btn_callback) {
+                cur_act_id = act_id;
+                cur_state = btn_st;
+                ESP_LOGI("BUTTON_TASK", "Button ID: %d, State: %d", act_id, btn_st);
+                tag->btn_callback(tag->user_data, info->adc_ch, cur_act_id, btn_st);
+            }
+
+            find = find->next;
+        }
+
+        ESP_LOGI("BUTTON_TASK", "Free stack: %d", uxTaskGetStackHighWaterMark(NULL));
+        vTaskDelay(ADC_SAMPLE_INTERVAL_TIME_MS / portTICK_PERIOD_MS);
+    }
+
+    // Temporarily disabled
+    // audio_free(tag);
+    vTaskDelete(NULL);
 }
+
 
 
 void adc_btn_delete_task(void)

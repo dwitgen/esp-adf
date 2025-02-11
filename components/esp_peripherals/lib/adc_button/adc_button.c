@@ -278,7 +278,7 @@ int get_adc_voltage(int channel) {
  
      audio_thread_create(NULL,
                          "button_task", button_task,
-                         (void *)tag,
+                         (void *)head,
                          task_cfg->task_stack,
                          task_cfg->task_prio,
                          task_cfg->ext_stack,

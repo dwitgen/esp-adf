@@ -397,7 +397,9 @@ void button_task(void *parameters) {
             if (btn_st != ADC_BTN_STATE_IDLE) {
                 cur_act_id = act_id;
                 cur_state = btn_st;
-                // Skipping callback for now
+                if (tag->btn_callback != NULL) {
+                    tag->btn_callback(tag->user_data, info->adc_ch, cur_act_id, btn_st);
+                }
             }
 
             find = find->next;

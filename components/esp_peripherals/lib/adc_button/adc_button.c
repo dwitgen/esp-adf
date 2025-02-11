@@ -372,19 +372,43 @@ void button_task(void *parameters) {
     adc_btn_list *head = tag->head;
     adc_btn_list *find = head;
 
-    while (find) {
-        adc_arr_t *info = &(find->adc_info);
-        
-        // Simple ADC read without processing
-        int adc_value = get_adc_voltage(info->adc_ch);
-        (void)adc_value;  // Suppress unused variable warning
+    static adc_btn_state_t cur_state = ADC_BTN_STATE_ADC;
+    adc_btn_state_t btn_st = ADC_BTN_STATE_IDLE;
+    int cur_act_id = ADC_BTN_INVALID_ACT_ID;
 
-        find = find->next;
+    while (_task_flag) {
+        find = head;
+        while (find) {
+            adc_arr_t *info = &(find->adc_info);
+            int adc_value = get_adc_voltage(info->adc_ch);
+
+            btn_decription *btn_dscp = find->btn_dscp;
+            int act_id = ADC_BTN_INVALID_ACT_ID;
+
+            // Simple button detection logic
+            for (int i = 0; i < info->total_steps; ++i) {
+                if (btn_dscp[i].active_id > ADC_BTN_INVALID_ID) {
+                    act_id = i;
+                    break;
+                }
+            }
+
+            btn_st = get_adc_btn_state(adc_value, act_id, find);
+            if (btn_st != ADC_BTN_STATE_IDLE) {
+                cur_act_id = act_id;
+                cur_state = btn_st;
+                // Skipping callback for now
+            }
+
+            find = find->next;
+        }
+
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
     vTaskDelete(NULL);
 }
+
 
 
 

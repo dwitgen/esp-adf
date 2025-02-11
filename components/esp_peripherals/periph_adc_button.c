@@ -92,6 +92,13 @@ static esp_err_t _adc_button_init(esp_periph_handle_t self)
             vPortFree(task_list_buffer);
         }
     }
+
+    xTaskCreatePinnedToCore(button_task, "adc_button_task",
+        adc_btn->task_cfg.task_stack,
+        self, adc_btn->task_cfg.task_prio,
+        &adc_btn->task_handle,
+        adc_btn->task_cfg.task_core);
+        
     // Force the task to run on Core 0
     //BaseType_t result = xTaskCreatePinnedToCore(button_task, "adc_button_task",
     //    8192,

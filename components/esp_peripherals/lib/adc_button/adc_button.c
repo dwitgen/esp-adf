@@ -225,7 +225,7 @@ esp_err_t adc_button_adc_init(adc_channel_t channel) {
 static int get_adc_voltage(int channel) {
     uint32_t sum = 0;
     int success_reads = 0;
-
+    ESP_LOGE(TAG, "ADC_SAMPLES_NUM: %d", ADC_SAMPLES_NUM);
     for (int i = 0; i < ADC_SAMPLES_NUM; i++) {
         int raw;
         esp_err_t ret = adc_oneshot_read(adc1_handle, channel, &raw);
@@ -368,7 +368,7 @@ void button_task(void *parameters) {
     static adc_btn_state_t cur_state = ADC_BTN_STATE_ADC;
     adc_btn_state_t btn_st = ADC_BTN_STATE_IDLE;
     int cur_act_id = ADC_BTN_INVALID_ACT_ID;
-
+    ESP_LOGE(TAG, "Button task started");
     while (_task_flag) {
         find = head;
         while (find) {
@@ -391,7 +391,7 @@ void button_task(void *parameters) {
                 cur_state = btn_st;
 
                 if (btn_st != ADC_BTN_STATE_IDLE && tag->btn_callback != NULL) {
-                    ESP_LOGI(TAG, "Calling button callback with ID: %d", cur_act_id);
+                    ESP_LOGE(TAG, "Calling button callback with ID: %d", cur_act_id);
                     tag->btn_callback(tag->user_data, info->adc_ch, cur_act_id, btn_st);
                 }
                 

@@ -276,7 +276,7 @@ int get_adc_voltage(int channel) {
     
      g_event_bit = xEventGroupCreate();
  
-     audio_thread_create(&tag->audio_thread,
+     audio_thread_create(NULL,
                          "button_task", button_task,
                          (void *)tag,
                          task_cfg->task_stack,

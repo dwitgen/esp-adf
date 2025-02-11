@@ -32,9 +32,9 @@
  #include "esp_log.h"
  #include "audio_thread.h"
  #include "audio_idf_version.h"
- #include "esp_adc/adc_oneshot.h"
- #include "esp_adc/adc_cali.h"
- #include "esp_adc/adc_cali_scheme.h"
+ #include <esp_adc/adc_oneshot.h> 
+ #include <esp_adc/adc_cali.h> 
+ #include <esp_adc/adc_cali_scheme.h> 
  
  #if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0))
  #define ADC_ATTEN_11db ADC_ATTEN_DB_11

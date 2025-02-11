@@ -30,6 +30,7 @@
  #endif
  
  #include "esp_err.h"
+ #include <esp_adc/adc_oneshot.h>
  
  typedef enum {
      USER_KEY_ID0,
@@ -90,7 +91,7 @@
  esp_err_t adc_init(adc_unit_t unit, adc_channel_t channel);
 
  int adc_read(adc_channel_t channel);
- 
+
  esp_err_t adc_deinit(void);
  
  #ifdef __cplusplus

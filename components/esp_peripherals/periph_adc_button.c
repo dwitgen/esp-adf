@@ -89,7 +89,7 @@ static esp_err_t _adc_button_init(esp_periph_handle_t self)
         self,
         5,
         &adc_btn->task_handle,
-        0);   // 0 for Core 0
+        1);   // 0 for Core 0
 
     if (result != pdPASS) {
         ESP_LOGE("BUTTON_TASK", "Task creation failed!");

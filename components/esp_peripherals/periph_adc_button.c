@@ -84,13 +84,18 @@ static esp_err_t _adc_button_init(esp_periph_handle_t self)
     }
 
     // Start button task
-    //xTaskCreatePinnedToCore(button_task, "adc_button_task",
-    //    8192,                  // Increase stack size
-    //    self,
-    //    adc_btn->task_cfg.task_prio,
-    //    &adc_btn->task_handle,
-    //    adc_btn->task_cfg.task_core);
-    ESP_LOGI("BUTTON_TASK", "Task creation skipped for debugging.");    
+    BaseType_t result = xTaskCreatePinnedToCore(button_task, "adc_button_task",
+        8192,
+        self,
+        5,
+        &adc_btn->task_handle,
+        adc_btn->task_cfg.task_core);
+
+    if (result != pdPASS) {
+    ESP_LOGE("BUTTON_TASK", "Task creation failed!");
+    return ESP_FAIL;
+    }
+    //ESP_LOGI("BUTTON_TASK", "Task creation skipped for debugging.");    
     return ESP_OK;
 }
 

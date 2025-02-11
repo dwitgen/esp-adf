@@ -86,6 +86,12 @@
  esp_err_t adc_btn_destroy_list(adc_btn_list *head);
  
  void adc_btn_delete_task(void);
+
+ esp_err_t adc_init(adc_unit_t unit, adc_channel_t channel);
+
+ int adc_read(adc_channel_t channel);
+ 
+ esp_err_t adc_deinit(void);
  
  #ifdef __cplusplus
  }

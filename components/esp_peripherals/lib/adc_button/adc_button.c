@@ -369,24 +369,23 @@ void button_task(void *parameters) {
     _task_flag = true;
 
     adc_btn_tag_t *tag = (adc_btn_tag_t *)parameters;
-    if (tag == NULL) {
-        vTaskDelete(NULL);
-    }
-
     adc_btn_list *head = tag->head;
     adc_btn_list *find = head;
 
     while (find) {
-        // Just check if the pointer is valid
-        if (find->btn_dscp == NULL) {
-            vTaskDelete(NULL);  // Fail early if descriptor is NULL
-        }
-        find = find->next;  // Move to the next node
+        adc_arr_t *info = &(find->adc_info);
+        
+        // Simple ADC read without processing
+        int adc_value = get_adc_voltage(info->adc_ch);
+        (void)adc_value;  // Suppress unused variable warning
+
+        find = find->next;
     }
 
     vTaskDelay(1000 / portTICK_PERIOD_MS);
     vTaskDelete(NULL);
 }
+
 
 
 void adc_btn_delete_task(void)

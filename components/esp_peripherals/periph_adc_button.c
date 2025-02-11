@@ -83,18 +83,27 @@ static esp_err_t _adc_button_init(esp_periph_handle_t self)
         return ret;
     }
 
-    // Force the task to run on Core 0
-    BaseType_t result = xTaskCreatePinnedToCore(button_task, "adc_button_task",
-        8192,
-        self,
-        5,
-        &adc_btn->task_handle,
-        1);   // 0 for Core 0
-
-    if (result != pdPASS) {
-        ESP_LOGE("BUTTON_TASK", "Task creation failed!");
-        return ESP_FAIL;
+    void print_task_info() {
+        char *task_list_buffer = pvPortMalloc(1024);
+        if (task_list_buffer != NULL) {
+            ESP_LOGI("TASK_INFO", "Task List:");
+            vTaskList(task_list_buffer);   // Display all tasks
+            ESP_LOGI("TASK_INFO", "\n%s", task_list_buffer);
+            vPortFree(task_list_buffer);
+        }
     }
+    // Force the task to run on Core 0
+    //BaseType_t result = xTaskCreatePinnedToCore(button_task, "adc_button_task",
+    //    8192,
+    //    self,
+    //    5,
+    //    &adc_btn->task_handle,
+    //    1);   // 0 for Core 0
+
+    //if (result != pdPASS) {
+    //    ESP_LOGE("BUTTON_TASK", "Task creation failed!");
+    //    return ESP_FAIL;
+    //}
     //ESP_LOGI("BUTTON_TASK", "Task creation skipped for debugging.");    
     return ESP_OK;
 }

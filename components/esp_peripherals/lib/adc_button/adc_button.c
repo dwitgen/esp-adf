@@ -395,8 +395,13 @@ void button_task(void *parameters) {
     adc_btn_state_t btn_st = ADC_BTN_STATE_IDLE;
     int cur_act_id = ADC_BTN_INVALID_ACT_ID;
 
+    // Log just before entering the main loop
+    ESP_LOGI("BUTTON_TASK", "Entering main task loop...");
+
     while (1) {
+        ESP_LOGI("BUTTON_TASK", "Inside main loop...");  // Add this
         find = head;
+
         while (find) {
             adc_arr_t *info = &(find->adc_info);
             int act_id = ADC_BTN_INVALID_ACT_ID;
@@ -429,11 +434,8 @@ void button_task(void *parameters) {
         vTaskDelay(ADC_SAMPLE_INTERVAL_TIME_MS / portTICK_PERIOD_MS);
     }
 
-    // Temporarily disabled
-    // audio_free(tag);
     vTaskDelete(NULL);
 }
-
 
 
 void adc_btn_delete_task(void)

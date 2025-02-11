@@ -84,12 +84,13 @@ static esp_err_t _adc_button_init(esp_periph_handle_t self)
     }
 
     // Start button task
-    xTaskCreatePinnedToCore(button_task, "adc_button_task",  // Changed to button_task
-                            adc_btn->task_cfg.task_stack,    // Fixed: task_stack instead of stack_size
-                            self,
-                            adc_btn->task_cfg.task_prio,
-                            &adc_btn->task_handle,           // task_handle added to struct
-                            adc_btn->task_cfg.task_core);
+    xTaskCreatePinnedToCore(button_task, "adc_button_task",
+        8192,                  // Increase stack size
+        self,
+        adc_btn->task_cfg.task_prio,
+        &adc_btn->task_handle,
+        adc_btn->task_cfg.task_core);
+
     return ESP_OK;
 }
 

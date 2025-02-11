@@ -365,122 +365,13 @@ static adc_btn_state_t get_adc_btn_state(int adc_value, int act_id, adc_btn_list
     }
     return st;
 }
-void button_task(void *parameters)
-{
-    _task_flag = true;
-    adc_btn_tag_t *tag = (adc_btn_tag_t *)parameters;
-    adc_btn_list *head = tag->head;
-    adc_btn_list *find = head;
-    xEventGroupClearBits(g_event_bit, DESTROY_BIT);
-    while (find) {
-        adc_arr_t *info = & (find->adc_info);
-        reset_btn(find->btn_dscp, info->total_steps);
-        find = find->next;
+void button_task(void *params) {
+    ESP_LOGI("BUTTON_TASK", "Minimal task started.");
+    while (1) {
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
-    find = head;
-
-#if defined ENABLE_ADC_VOLUME
-    short adc_vol_prev = ADC_BTN_INVALID_ID;
-    short adc_vol_cur = ADC_BTN_INVALID_ID;
-    short internal_time_ms = DIAL_VOL_INTERVAL_TIME_MS / ADC_SAMPLE_INTERVAL_TIME_MS;  // e.g., 100ms
-    static bool empty_flag;
-    static bool full_flag;
-    bool is_first_time = true;
-#endif // ENABLE_ADC_VOLUME
-
-    static adc_btn_state_t cur_state = ADC_BTN_STATE_ADC;
-    adc_btn_state_t btn_st = ADC_BTN_STATE_IDLE;
-    int cur_act_id = ADC_BTN_INVALID_ACT_ID;
-
-    while (_task_flag) {
-#if defined ENABLE_ADC_VOLUME
-        if (internal_time_ms == 0) {
-            adc_vol_cur = get_adc_voltage(DIAL_adc_ch);
-            internal_time_ms = DIAL_VOL_INTERVAL_TIME_MS / ADC_SAMPLE_INTERVAL_TIME_MS;
-            if (adc_vol_prev > 0) {
-                short n = abs(adc_vol_cur - adc_vol_prev);
-                if (is_first_time) {
-                    is_first_time = false;
-                }
-                if (adc_vol_cur < 200) {
-                    if (!empty_flag) {
-                        ESP_LOGI(TAG, "ABS_LOW:%d, %d->0", n, adc_vol_cur / 25);
-                        empty_flag = true;
-                    }
-                } else if (adc_vol_cur > 2500) {
-                    if (!full_flag) {
-                        ESP_LOGI(TAG, "ABS_HIGH:%d, %d->100", n, adc_vol_cur / 25);
-                        full_flag = true;
-                    }
-                } else if (n > 80) {
-                    empty_flag = false;
-                    full_flag = false;
-                }
-            }
-            adc_vol_prev = adc_vol_cur;
-        }
-        internal_time_ms--;
-#else
-        find = head;
-        while (find) {
-            adc_arr_t *info = &(find->adc_info);
-            int act_id = ADC_BTN_INVALID_ACT_ID;
-            btn_decription *btn_dscp = find->btn_dscp;
-            switch (cur_state) {
-                case ADC_BTN_STATE_ADC: {
-                        int adc = get_adc_voltage(info->adc_ch);
-                        ESP_LOGD(TAG, "ADC:%d", adc);
-                        for (int i = 0; i < info->total_steps; ++i) {
-                            if (btn_dscp[i].active_id > ADC_BTN_INVALID_ID) {
-                                act_id = i;
-                                break;
-                            }
-                        }
-                        btn_st = get_adc_btn_state(adc, act_id, find);
-                        if (btn_st != ADC_BTN_STATE_IDLE) {
-                            cur_act_id = act_id;
-                            cur_state = btn_st;
-                            ESP_LOGD(TAG, "ADC ID:%d", act_id);
-                        }
-                        break;
-                    }
-                case ADC_BTN_STATE_PRESSED: {
-                        tag->btn_callback(tag->user_data, info->adc_ch, cur_act_id, ADC_BTN_STATE_PRESSED);
-                        cur_state = ADC_BTN_STATE_ADC;
-                        break;
-                    }
-                case ADC_BTN_STATE_LONG_PRESSED: {
-                        tag->btn_callback(tag->user_data, info->adc_ch, cur_act_id, ADC_BTN_STATE_LONG_PRESSED);
-                        cur_state = ADC_BTN_STATE_ADC;
-                        break;
-                    }
-                case ADC_BTN_STATE_LONG_RELEASE: {
-                        tag->btn_callback(tag->user_data, info->adc_ch, cur_act_id, ADC_BTN_STATE_LONG_RELEASE);
-                        cur_state = ADC_BTN_STATE_ADC;
-                        break;
-                    }
-                case ADC_BTN_STATE_RELEASE: {
-                        tag->btn_callback(tag->user_data, info->adc_ch, cur_act_id, ADC_BTN_STATE_RELEASE);
-                        cur_state = ADC_BTN_STATE_ADC;
-                        break;
-                    }
-                default:
-                    ESP_LOGE(TAG, "Not support state %d", cur_state);
-                    break;
-            }
-            find = find->next;
-        }
-#endif // ENABLE_ADC_VOLUME
-
-        vTaskDelay(ADC_SAMPLE_INTERVAL_TIME_MS / portTICK_PERIOD_MS);
-    }
-
-    if (g_event_bit) {
-        xEventGroupSetBits(g_event_bit, DESTROY_BIT);
-    }
-    audio_free(tag);
-    vTaskDelete(NULL);
 }
+
 
 void adc_btn_delete_task(void)
 {

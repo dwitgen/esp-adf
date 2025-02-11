@@ -194,93 +194,86 @@ static bool adc_calibration_init(adc_unit_t unit, adc_channel_t channel, adc_att
 /*---------------------------------------------------------------
         ADC Initialization for Button Module
 ---------------------------------------------------------------*/
-esp_err_t adc_button_adc_init(adc_channel_t channel)
-{
-    adc_oneshot_unit_init_cfg_t init_config = {
-        .unit_id = ADC_UNIT_1,
-    };
-    esp_err_t ret = adc_oneshot_new_unit(&init_config, &adc1_handle);
+esp_err_t adc_button_adc_init(adc_channel_t channel) {
+    esp_err_t ret;
+
+    adc_oneshot_unit_init_cfg_t init_config = { .unit_id = ADC_UNIT_1 };
+    ret = adc_oneshot_new_unit(&init_config, &adc1_handle);
     if (ret != ESP_OK) {
-         ESP_LOGE(TAG, "adc_oneshot_new_unit failed; ret = %d", ret);
-         return ret;
+        ESP_LOGE(TAG, "adc_oneshot_new_unit failed: %d", ret);
+        return ret;
     }
-    
+
     adc_oneshot_chan_cfg_t ch_config = {
         .atten = ADC_ATTEN_DB_12,
         .bitwidth = ADC_BITWIDTH_DEFAULT,
     };
     ret = adc_oneshot_config_channel(adc1_handle, channel, &ch_config);
     if (ret != ESP_OK) {
-         ESP_LOGE(TAG, "adc_oneshot_config_channel failed; ret = %d", ret);
-         return ret;
+        ESP_LOGE(TAG, "adc_oneshot_config_channel failed: %d", ret);
+        return ret;
     }
-    
+
     bool calibrated = adc_calibration_init(ADC_UNIT_1, channel, ADC_ATTEN_DB_12, &adc1_cali_handle);
     if (!calibrated) {
-         ESP_LOGW(TAG, "Calibration not supported, using raw ADC values");
+        ESP_LOGW(TAG, "ADC calibration skipped, using raw values");
     }
+
     return ESP_OK;
 }
 
-static int get_adc_voltage(int channel)
-{
-    uint32_t data[ADC_SAMPLES_NUM] = { 0 };
+static int get_adc_voltage(int channel) {
     uint32_t sum = 0;
-    // Loop to acquire multiple samples using the new adc oneshot API
+    int success_reads = 0;
+
     for (int i = 0; i < ADC_SAMPLES_NUM; i++) {
         int raw;
-        // Read raw ADC value from the oneshot API (adc1_handle must be initialized earlier)
         esp_err_t ret = adc_oneshot_read(adc1_handle, channel, &raw);
         if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "adc_oneshot_read failed; ret = %d", ret);
-            return -1;
+            ESP_LOGE(TAG, "adc_oneshot_read failed at sample %d: %d", i, ret);
+            continue;  // Skip this sample
         }
+        success_reads++;
+
         int voltage = 0;
-        // Use calibration handle (adc1_cali_handle) if available to convert raw value to voltage
         if (adc1_cali_handle) {
             ret = adc_cali_raw_to_voltage(adc1_cali_handle, raw, &voltage);
             if (ret != ESP_OK) {
-                ESP_LOGE(TAG, "adc_cali_raw_to_voltage failed; ret = %d", ret);
-                voltage = raw; // fallback to raw value if calibration conversion fails
+                ESP_LOGW(TAG, "Calibration failed, using raw: %d", raw);
+                voltage = raw;
             }
         } else {
-            voltage = raw; // fallback to raw value if no calibration handle is available
+            voltage = raw;  // Use raw if calibration not available
         }
-        data[i] = voltage;
+
+        sum += voltage;
     }
-    
-    // Sort the acquired samples
-    for (int j = 0; j < ADC_SAMPLES_NUM - 1; j++) {
-        for (int i = 0; i < ADC_SAMPLES_NUM - j - 1; i++) {
-            if (data[i] > data[i + 1]) {
-                int tmp = data[i];
-                data[i] = data[i + 1];
-                data[i + 1] = tmp;
-            }
-        }
+
+    if (success_reads == 0) {
+        ESP_LOGE(TAG, "No successful ADC reads!");
+        return -1;
     }
-    
-    // Average the middle samples to exclude potential outliers
-    for (int num = 1; num < ADC_SAMPLES_NUM - 1; num++) {
-        sum += data[num];
-    }
-    return sum / (ADC_SAMPLES_NUM - 2);
+
+    return sum / success_reads;
 }
 
-static int get_button_id(adc_btn_list *node, int adc)
-{
-    int m = ADC_BTN_INVALID_ID;
+static int get_button_id(adc_btn_list *node, int adc) {
+    int button_id = ADC_BTN_INVALID_ID;
     adc_arr_t *info = &(node->adc_info);
+
     for (int i = 0; i < info->total_steps; i++) {
-        ESP_LOGV(TAG, "max:%d, adc:%d, i:%d, %d, %d", info->total_steps, adc, i, info->adc_level_step[i], info->adc_level_step[i + 1]);
-        if ((adc > info->adc_level_step[i])
-            && (adc <= info->adc_level_step[i + 1])) {
-            m = i;
+        ESP_LOGI(TAG, "Checking threshold: %d - %d (ADC: %d)", 
+                 info->adc_level_step[i], info->adc_level_step[i + 1], adc);
+
+        if (adc > info->adc_level_step[i] && adc <= info->adc_level_step[i + 1]) {
+            button_id = i;
+            ESP_LOGI(TAG, "Matched button ID: %d", button_id);
             break;
         }
     }
-    return m;
+    return button_id;
 }
+
 
 static void reset_btn(btn_decription *btn_dscp, int btn_num)
 {
@@ -385,7 +378,6 @@ void button_task(void *parameters) {
             btn_decription *btn_dscp = find->btn_dscp;
             int act_id = ADC_BTN_INVALID_ACT_ID;
 
-            // Simple button detection logic
             for (int i = 0; i < info->total_steps; ++i) {
                 if (btn_dscp[i].active_id > ADC_BTN_INVALID_ID) {
                     act_id = i;
@@ -397,19 +389,23 @@ void button_task(void *parameters) {
             if (btn_st != ADC_BTN_STATE_IDLE) {
                 cur_act_id = act_id;
                 cur_state = btn_st;
-                if (tag->btn_callback != NULL) {
+
+                if (btn_st != ADC_BTN_STATE_IDLE && tag->btn_callback != NULL) {
+                    ESP_LOGI(TAG, "Calling button callback with ID: %d", cur_act_id);
                     tag->btn_callback(tag->user_data, info->adc_ch, cur_act_id, btn_st);
                 }
+                
             }
 
             find = find->next;
         }
 
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        vTaskDelay(20 / portTICK_PERIOD_MS);
     }
 
     vTaskDelete(NULL);
 }
+
 
 
 

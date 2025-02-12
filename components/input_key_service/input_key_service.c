@@ -155,6 +155,7 @@ periph_service_state_t get_input_key_service_state(periph_service_handle_t input
 
 esp_err_t input_key_service_add_key(periph_service_handle_t input_key_handle, input_key_service_info_t *input_key_info, int add_key_num)
 {
+    ESP_LOGE(TAG, "input_key_service_add_key");
     AUDIO_NULL_CHECK(TAG, input_key_handle, return ESP_ERR_INVALID_ARG);
     AUDIO_NULL_CHECK(TAG, input_key_info, return ESP_ERR_INVALID_ARG);
     if (add_key_num <= 0) {

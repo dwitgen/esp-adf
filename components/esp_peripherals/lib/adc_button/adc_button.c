@@ -64,7 +64,7 @@
  static adc_cali_handle_t cali_handle;
 
  esp_err_t adc_init(adc_unit_t unit, adc_channel_t channel) {
-    ESP_LOGI(TAG, "Initializing adc unit: %d on channel: %d", unit, channel);
+    ESP_LOGE(TAG, "Initializing adc unit: %d on channel: %d", unit, channel);
     adc_oneshot_unit_init_cfg_t init_config = {
         .unit_id = unit,
         .ulp_mode = ADC_ULP_MODE_DISABLE,
@@ -88,7 +88,7 @@
 }
 
 int adc_read(adc_channel_t channel) {
-    ESP_LOGI(TAG, "Reading adc on channel: %d", channel);
+    ESP_LOGE(TAG, "Reading adc on channel: %d", channel);
     int raw = 0, voltage = 0;
     ESP_ERROR_CHECK(adc_oneshot_read(adc_handle, channel, &raw));
     ESP_ERROR_CHECK(adc_cali_raw_to_voltage(cali_handle, raw, &voltage));
@@ -142,7 +142,7 @@ esp_err_t adc_btn_destroy_list(adc_btn_list *head) {
 }
 
 int get_adc_voltage(int channel) {
-    ESP_LOGI(TAG, "Getting adc voltage on channel: %d", channel);
+    ESP_LOGE(TAG, "Getting adc voltage on channel: %d", channel);
     return adc_read(channel);
 }
  static int get_button_id(adc_btn_list *node, int adc)
@@ -245,12 +245,12 @@ int get_adc_voltage(int channel) {
  }
  
  static void button_task(void *parameters) {
-    ESP_LOGI(TAG, "Button Task Start");
+    ESP_LOGE(TAG, "Button Task Start");
     adc_btn_list *node = (adc_btn_list *)parameters;
     while (1) {
         while (node) {
             int voltage = adc_read(node->adc_info.adc_ch);
-            ESP_LOGI(TAG, "Channel %d Voltage: %d", node->adc_info.adc_ch, voltage);
+            ESP_LOGE(TAG, "Channel %d Voltage: %d", node->adc_info.adc_ch, voltage);
             node = node->next;
         }
         vTaskDelay(pdMS_TO_TICKS(25)); // Adjust delay as needed
@@ -271,7 +271,7 @@ int get_adc_voltage(int channel) {
  }
  
  void adc_btn_init(void *user_data, adc_button_callback cb, adc_btn_list *head, adc_btn_task_cfg_t *task_cfg) {
-    ESP_LOGI(TAG, "ADC Button Init");
+    ESP_LOGE(TAG, "ADC Button Init");
     adc_btn_list *node = head;
     while (node) {
         ESP_ERROR_CHECK(adc_init(ADC_UNIT_1, node->adc_info.adc_ch));

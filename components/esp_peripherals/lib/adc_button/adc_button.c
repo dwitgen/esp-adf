@@ -302,7 +302,7 @@ int get_adc_voltage(int channel) {
                          task_cfg->task_stack,
                          task_cfg->task_prio,
                          task_cfg->ext_stack,
-                         task_cfg->task_core);
+                         0);
     
     ESP_LOGE(TAG, "Button Task running on core: %d", xPortGetCoreID());
  }

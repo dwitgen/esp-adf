@@ -245,17 +245,23 @@ int get_adc_voltage(int channel) {
  }
  
  static void button_task(void *parameters) {
-    ESP_LOGE(TAG, "Button Task Start");
+    ESP_LOGI(TAG, "Button Task Started");
+
     adc_btn_list *node = (adc_btn_list *)parameters;
     while (1) {
+        ESP_LOGI(TAG, "Button Task Loop Running");  // ✅ Add this log to verify looping
+
         while (node) {
-            int voltage = adc_read(node->adc_info.adc_ch);
-            ESP_LOGE(TAG, "Channel %d Voltage: %d", node->adc_info.adc_ch, voltage);
+            ESP_LOGI(TAG, "Reading ADC on channel: %d", node->adc_info.adc_ch);
+            int voltage = adc_read((adc_channel_t)node->adc_info.adc_ch);
+            ESP_LOGI(TAG, "Channel %d Voltage: %d", node->adc_info.adc_ch, voltage);
             node = node->next;
         }
-        vTaskDelay(pdMS_TO_TICKS(25)); // Adjust delay as needed
+
+        vTaskDelay(pdMS_TO_TICKS(100));  // Small delay to prevent task hogging CPU
     }
 }
+
 
  void adc_btn_delete_task(void)
  {

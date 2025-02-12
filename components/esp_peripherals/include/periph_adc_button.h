@@ -77,7 +77,7 @@
  **/
  
  #define ADC_DEFAULT_ARR() {   \
-     .adc_ch = ADC1_CHANNEL_3, \
+     .adc_ch = ADC_CHANNEL_3, \
      .adc_level_step = NULL,   \
      .total_steps = 6,         \
      .press_judge_time = 3000, \

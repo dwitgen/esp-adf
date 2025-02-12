@@ -259,6 +259,7 @@ int get_adc_voltage(int channel) {
         } else {
             adc_btn_list *current_node = node;
             while (current_node) {
+                ESP_LOGE(TAG, "Button Task running on core: %d", xPortGetCoreID());
                 ESP_LOGE(TAG, "Reading ADC on channel: %d", current_node->adc_info.adc_ch);
                 int voltage = adc_read((adc_channel_t)current_node->adc_info.adc_ch);
                 ESP_LOGE(TAG, "Channel %d Voltage: %d", current_node->adc_info.adc_ch, voltage);

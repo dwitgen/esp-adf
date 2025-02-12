@@ -76,7 +76,8 @@
  
  esp_periph_handle_t periph_adc_button_init(periph_adc_button_cfg_t *config)
  {
-     esp_periph_handle_t periph = esp_periph_create(PERIPH_ID_ADC_BTN, "periph_adc_btn");
+    ESP_LOGE(TAG, "Initializing ADC Button Peripheral..."); 
+    esp_periph_handle_t periph = esp_periph_create(PERIPH_ID_ADC_BTN, "periph_adc_btn");
      AUDIO_MEM_CHECK(TAG, periph, return NULL);
  
      periph_adc_btn_t *periph_adc_btn = audio_calloc(1, sizeof(periph_adc_btn_t));
@@ -84,8 +85,19 @@
          audio_free(periph);
          return NULL;
      });
+     if (periph_adc_btn == NULL) {
+        ESP_LOGE(TAG, "Failed to allocate memory for ADC button peripheral");
+        return NULL;
+    } else {
+        ESP_LOGE(TAG, "Memory allocated for ADC button peripheral");
+    }
      periph_adc_btn->adc_channels = config->arr_size;
      periph_adc_btn->list = adc_btn_create_list(config->arr, config->arr_size);
+    if (periph_adc_btn->list == NULL) {
+        ESP_LOGE(TAG, "Failed to create ADC button list");
+    } else {
+        ESP_LOGE(TAG, "ADC button list created successfully");
+    }
      memcpy(&periph_adc_btn->task_cfg, &config->task_cfg, sizeof(adc_btn_task_cfg_t));
      AUDIO_MEM_CHECK(TAG, periph_adc_btn->list, {
          audio_free(periph);

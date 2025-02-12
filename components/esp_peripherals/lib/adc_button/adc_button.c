@@ -247,6 +247,7 @@ int get_adc_voltage(int channel) {
  
  static void button_task(void *parameters) {
     ESP_LOGE(TAG, "Button Task Started");
+    ESP_LOGE(TAG, "Button Task running on core: %d", xPortGetCoreID());
 
     adc_btn_list *node = (adc_btn_list *)parameters;
     ESP_LOGE(TAG, "Button Task: Node: %p", node);

@@ -133,6 +133,7 @@ esp_err_t adc_deinit(void) {
 }
 esp_err_t adc_btn_destroy_list(adc_btn_list *head) {
     adc_btn_list *current = head, *temp;
+    ESP_LOGE(TAG, "Destroying adc button list");
     while (current) {
         temp = current->next;
         audio_free(current);
@@ -248,19 +249,26 @@ int get_adc_voltage(int channel) {
     ESP_LOGE(TAG, "Button Task Started");
 
     adc_btn_list *node = (adc_btn_list *)parameters;
+    ESP_LOGE(TAG, "Button Task: Node: %p", node);
     while (1) {
-        ESP_LOGE(TAG, "Button Task Loop Running");  // ✅ Add this log to verify looping
+        ESP_LOGE(TAG, "Button Task Loop Running");
 
-        while (node) {
-            ESP_LOGE(TAG, "Reading ADC on channel: %d", node->adc_info.adc_ch);
-            int voltage = adc_read((adc_channel_t)node->adc_info.adc_ch);
-            ESP_LOGE(TAG, "Channel %d Voltage: %d", node->adc_info.adc_ch, voltage);
-            node = node->next;
+        if (node == NULL) {
+            ESP_LOGW(TAG, "Button Task: Node is NULL");
+        } else {
+            adc_btn_list *current_node = node;
+            while (current_node) {
+                ESP_LOGE(TAG, "Reading ADC on channel: %d", current_node->adc_info.adc_ch);
+                int voltage = adc_read((adc_channel_t)current_node->adc_info.adc_ch);
+                ESP_LOGE(TAG, "Channel %d Voltage: %d", current_node->adc_info.adc_ch, voltage);
+                current_node = current_node->next;
+            }
         }
 
-        vTaskDelay(pdMS_TO_TICKS(100));  // Small delay to prevent task hogging CPU
+        vTaskDelay(pdMS_TO_TICKS(500));  // Add delay to avoid flooding logs
     }
 }
+
 
 
  void adc_btn_delete_task(void)

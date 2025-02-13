@@ -25,7 +25,8 @@
  #ifndef _PERIPH_ADC_BUTTON_H_
  #define _PERIPH_ADC_BUTTON_H_
  
- #include "driver/adc.h"
+ //#include "driver/adc.h"
+ #include <esp_adc/adc_oneshot.h>
  #include "adc_button.h"
  #include "esp_peripherals.h"
  

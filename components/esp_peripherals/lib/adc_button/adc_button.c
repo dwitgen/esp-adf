@@ -112,11 +112,41 @@ esp_err_t adc_deinit(void) {
  static const int DESTROY_BIT = BIT0;
  static bool _task_flag;
  
- adc_btn_list *adc_btn_create_list(adc_arr_t *adc_conf, int channels) {
+//adc_btn_list *adc_btn_create_list(adc_arr_t *adc_conf, int channels) {
+//    adc_btn_list *head = NULL, *node = NULL, *find = NULL;
+//    for (int i = 0; i < channels; i++) {
+//        node = (adc_btn_list *)audio_calloc(1, sizeof(adc_btn_list));
+//        if (!node) return NULL;
+
+//        memcpy(&node->adc_info, &adc_conf[i], sizeof(adc_arr_t));
+//        node->next = NULL;
+//
+//        if (!head) {
+//            head = node;
+//            find = head;
+//        } else {
+//            find->next = node;
+//            find = node;
+//        }
+//    }
+//    return head;
+//}
+
+adc_btn_list *adc_btn_create_list(adc_arr_t *adc_conf, int channels) {
+    if (adc_conf == NULL || channels == 0) {
+        ESP_LOGE(TAG, "Invalid ADC config or zero channels.");
+        return NULL;
+    }
+
+    ESP_LOGI(TAG, "Creating ADC button list with %d channels", channels);
+
     adc_btn_list *head = NULL, *node = NULL, *find = NULL;
     for (int i = 0; i < channels; i++) {
         node = (adc_btn_list *)audio_calloc(1, sizeof(adc_btn_list));
-        if (!node) return NULL;
+        if (!node) {
+            ESP_LOGE(TAG, "Failed to allocate memory for button %d", i);
+            return NULL;
+        }
 
         memcpy(&node->adc_info, &adc_conf[i], sizeof(adc_arr_t));
         node->next = NULL;
@@ -128,9 +158,14 @@ esp_err_t adc_deinit(void) {
             find->next = node;
             find = node;
         }
+
+        ESP_LOGE(TAG, "Added button %d on channel %d (Node=%p, Next=%p)", 
+                 i, node->adc_info.adc_ch, node, node->next);
     }
+
     return head;
 }
+
 esp_err_t adc_btn_destroy_list(adc_btn_list *head) {
     adc_btn_list *current = head, *temp;
     ESP_LOGE(TAG, "Destroying adc button list");

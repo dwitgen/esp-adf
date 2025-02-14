@@ -337,4 +337,5 @@ int get_adc_voltage(int channel) {
                         task_cfg->task_core);
     
     ESP_LOGE(TAG, "Button Task running on core: %d", xPortGetCoreID());
+    ESP_LOGE(TAG, "Button Task Handle: %p", tag->audio_thread);
 }

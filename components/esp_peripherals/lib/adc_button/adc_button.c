@@ -288,22 +288,26 @@ int get_adc_voltage(int channel) {
  
  void adc_btn_init(void *user_data, adc_button_callback cb, adc_btn_list *head, adc_btn_task_cfg_t *task_cfg) {
     ESP_LOGE(TAG, "ADC Button Init");
-    adc_btn_list *node = head;
-    while (node) {
-        ESP_ERROR_CHECK(adc_init(ADC_UNIT_1, node->adc_info.adc_ch));
-        node = node->next;
+
+    adc_btn_tag_t *tag = audio_calloc(1, sizeof(adc_btn_tag_t));
+    if (!tag) {
+        ESP_LOGE(TAG, "Memory allocation failed!");
+        return;
     }
 
-    
-     g_event_bit = xEventGroupCreate();
- 
-     audio_thread_create(NULL,
-                         "button_task", button_task,
-                         (void *)head,
-                         task_cfg->task_stack,
-                         5,
-                         task_cfg->ext_stack,
-                         0);
+    tag->user_data = user_data;
+    tag->head = head;
+    tag->btn_callback = cb;  // ✅ Ensure callback is set
+
+    g_event_bit = xEventGroupCreate();
+
+    audio_thread_create(&tag->audio_thread,
+                        "button_task", button_task,
+                        (void *)tag,
+                        task_cfg->task_stack,
+                        task_cfg->task_prio,
+                        task_cfg->ext_stack,
+                        task_cfg->task_core);
     
     ESP_LOGE(TAG, "Button Task running on core: %d", xPortGetCoreID());
- }
+}

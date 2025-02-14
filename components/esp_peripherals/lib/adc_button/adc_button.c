@@ -288,6 +288,7 @@ int get_adc_voltage(int channel) {
  
  void adc_btn_init(void *user_data, adc_button_callback cb, adc_btn_list *head, adc_btn_task_cfg_t *task_cfg) {
     ESP_LOGE(TAG, "ADC Button Init");
+    ESP_LOGE(TAG, "ADC Button Init: Received head=%p", head);
     adc_btn_list *node = head;
     while (node) {
         ESP_ERROR_CHECK(adc_init(ADC_UNIT_1, node->adc_info.adc_ch));

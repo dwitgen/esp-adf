@@ -298,10 +298,11 @@ int get_adc_voltage(int channel) {
         ESP_LOGE(TAG, "Memory allocation failed!");
         return;
     }
-
+    ESP_LOGE(TAG, "ADC Button Init: Received head=%p", head);
     tag->user_data = user_data;
     tag->head = head;
     tag->btn_callback = cb;  // ✅ Ensure callback is set
+    ESP_LOGE(TAG, "ADC Button Init: Received head=%p", head);
 
     g_event_bit = xEventGroupCreate();
 

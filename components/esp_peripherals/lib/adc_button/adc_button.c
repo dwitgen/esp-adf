@@ -297,7 +297,7 @@ int get_adc_voltage(int channel) {
 
     tag->user_data = user_data;
     tag->head = head;
-    tag->btn_callback = cb;  // ✅ Ensure callback is set
+    //tag->btn_callback = cb;  // ✅ Ensure callback is set
 
     g_event_bit = xEventGroupCreate();
 

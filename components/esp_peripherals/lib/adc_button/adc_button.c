@@ -248,8 +248,11 @@ int get_adc_voltage(int channel) {
  static void button_task(void *parameters) {
     ESP_LOGE(TAG, "Button Task Started");
     ESP_LOGE(TAG, "Button Task running on core: %d", xPortGetCoreID());
+    ESP_LOGE(TAG, "Button Task: Node=%p, tag->head=%p", node, ((adc_btn_tag_t *)parameters)->head);
+    ESP_LOGE(TAG, "Button Task: Node=%p, ADC Channel Before Loop=%d", node, node->adc_info.adc_ch);
 
     adc_btn_list *node = (adc_btn_list *)parameters;
+    ESP_LOGE(TAG, "Button Task: Node=%p, ADC Channel Before Loop=%d", node, node->adc_info.adc_ch);
     ESP_LOGE(TAG, "Button Task: Node: %p", node);
     while (1) {
         ESP_LOGE(TAG, "Button Task Loop Running");
@@ -304,9 +307,10 @@ int get_adc_voltage(int channel) {
         ESP_LOGE(TAG, "Memory allocation failed!");
         return;
     }
+    ESP_LOGE(TAG, "ADC Button Init: ADC Channel=%d, Node=%p", head->adc_info.adc_ch, head);
     ESP_LOGE(TAG, "ADC Button Init: Received head=%p", head);
     tag->user_data = user_data;
-    //tag->head = (void *)head;
+    tag->head = node; //(void *)head;
     tag->btn_callback = cb;  // ✅ Ensure callback is set
     ESP_LOGE(TAG, "ADC Button Init: Received head=%p", head);
 

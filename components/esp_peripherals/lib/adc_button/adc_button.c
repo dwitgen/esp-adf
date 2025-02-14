@@ -290,7 +290,7 @@ int get_adc_voltage(int channel) {
     ESP_LOGE(TAG, "ADC Button Init");
     ESP_LOGE(TAG, "Before malloc: Free Heap: %d bytes", esp_get_free_heap_size());
     //adc_btn_tag_t *tag = (adc_btn_tag_t *)malloc(sizeof(adc_btn_tag_t));
-    adc_btn_tag_t *tag = (adc_btn_tag_t *)audio_calloc()(1, sizeof(adc_btn_tag_t));
+    adc_btn_tag_t *tag = (adc_btn_tag_t *)audio_calloc(1, sizeof(adc_btn_tag_t));
 
     ESP_ERROR_CHECK_WITHOUT_ABORT(tag ? ESP_OK : ESP_ERR_NO_MEM);
     ESP_LOGE(TAG, "After malloc: Free Heap: %d bytes", esp_get_free_heap_size());

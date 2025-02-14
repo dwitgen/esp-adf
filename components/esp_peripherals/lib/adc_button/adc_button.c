@@ -288,8 +288,11 @@ int get_adc_voltage(int channel) {
  
  void adc_btn_init(void *user_data, adc_button_callback cb, adc_btn_list *head, adc_btn_task_cfg_t *task_cfg) {
     ESP_LOGE(TAG, "ADC Button Init");
+    ESP_LOGE(TAG, "Before malloc: Free Heap: %d bytes", esp_get_free_heap_size());
+    adc_btn_tag_t *tag = (adc_btn_tag_t *)audio_calloc(1, sizeof(adc_btn_tag_t));
 
-    adc_btn_tag_t *tag = audio_calloc(1, sizeof(adc_btn_tag_t));
+    ESP_ERROR_CHECK_WITHOUT_ABORT(tag ? ESP_OK : ESP_ERR_NO_MEM);
+    ESP_LOGE(TAG, "After malloc: Free Heap: %d bytes", esp_get_free_heap_size());
     if (!tag) {
         ESP_LOGE(TAG, "Memory allocation failed!");
         return;
@@ -297,7 +300,7 @@ int get_adc_voltage(int channel) {
 
     tag->user_data = user_data;
     tag->head = head;
-    //tag->btn_callback = cb;  // ✅ Ensure callback is set
+    tag->btn_callback = cb;  // ✅ Ensure callback is set
 
     g_event_bit = xEventGroupCreate();
 

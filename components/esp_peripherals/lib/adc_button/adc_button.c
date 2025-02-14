@@ -249,30 +249,42 @@ int get_adc_voltage(int channel) {
     ESP_LOGE(TAG, "Button Task Started");
     ESP_LOGE(TAG, "Button Task running on core: %d", xPortGetCoreID());
     
-    adc_btn_list *node = (adc_btn_list *)parameters;
-    ESP_LOGE(TAG, "Button Task: Node=%p, ADC Channel Before Loop=%d", node, node->adc_info.adc_ch);
-    ESP_LOGE(TAG, "Button Task: Node=%p, tag->head=%p", node, ((adc_btn_tag_t *)parameters)->head);
-    
-    ESP_LOGE(TAG, "Button Task: Node: %p", node);
+    adc_btn_tag_t *tag = (adc_btn_tag_t *)parameters;
+
+    if (!tag) {
+        ESP_LOGE(TAG, "ERROR: Received NULL tag in button_task!");
+        vTaskDelete(NULL);
+        return;
+    }
+
+    if (!tag->head) {
+        ESP_LOGE(TAG, "ERROR: tag->head is NULL in button_task!");
+        vTaskDelete(NULL);
+        return;
+    }
+
+    ESP_LOGE(TAG, "Button Task: tag=%p, tag->head=%p", tag, tag->head);
+
+    adc_btn_list *node = tag->head;
     while (1) {
         ESP_LOGE(TAG, "Button Task Loop Running");
 
-        if (node == NULL) {
-            ESP_LOGW(TAG, "Button Task: Node is NULL");
-        } else {
-            adc_btn_list *current_node = node;
-            while (current_node) {
-                ESP_LOGE(TAG, "Button Task running on core: %d", xPortGetCoreID());
-                ESP_LOGE(TAG, "Reading ADC on channel: %d", current_node->adc_info.adc_ch);
-                int voltage = adc_read((adc_channel_t)ADC_CHANNEL_7); //current_node->adc_info.adc_ch);
-                ESP_LOGE(TAG, "Channel %d Voltage: %d", current_node->adc_info.adc_ch, voltage);
-                current_node = current_node->next;
-            }
+        if (!node) {
+            ESP_LOGE(TAG, "ERROR: node is NULL in button_task!");
+            break;
         }
 
-        vTaskDelay(pdMS_TO_TICKS(500));  // Add delay to avoid flooding logs
+        while (node) {
+            ESP_LOGE(TAG, "Reading ADC on channel: %d (Node=%p)", node->adc_info.adc_ch, node);
+            int voltage = adc_read((adc_channel_t)node->adc_info.adc_ch);
+            ESP_LOGE(TAG, "Channel %d Voltage: %d", node->adc_info.adc_ch, voltage);
+            node = node->next;
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(500));
     }
 }
+
 
 
 
@@ -310,7 +322,7 @@ int get_adc_voltage(int channel) {
     ESP_LOGE(TAG, "ADC Button Init: ADC Channel=%d, Node=%p", head->adc_info.adc_ch, head);
     ESP_LOGE(TAG, "ADC Button Init: Received head=%p", head);
     tag->user_data = user_data;
-    tag->head = node; //(void *)head;
+    tag->head = head;
     tag->btn_callback = cb;  // ✅ Ensure callback is set
     ESP_LOGE(TAG, "ADC Button Init: Received head=%p", head);
 

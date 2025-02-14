@@ -293,16 +293,31 @@ int get_adc_voltage(int channel) {
         ESP_ERROR_CHECK(adc_init(ADC_UNIT_1, node->adc_info.adc_ch));
         node = node->next;
     }
+    ESP_LOGE(TAG, "Before malloc: Free Heap: %d bytes", esp_get_free_heap_size());
+    //adc_btn_tag_t *tag = (adc_btn_tag_t *)malloc(sizeof(adc_btn_tag_t));
+    adc_btn_tag_t *tag = (adc_btn_tag_t *)audio_calloc(1, sizeof(adc_btn_tag_t));
+
+    ESP_ERROR_CHECK_WITHOUT_ABORT(tag ? ESP_OK : ESP_ERR_NO_MEM);
+    ESP_LOGE(TAG, "After malloc: Free Heap: %d bytes", esp_get_free_heap_size());
+    if (!tag) {
+        ESP_LOGE(TAG, "Memory allocation failed!");
+        return;
+    }
     ESP_LOGE(TAG, "ADC Button Init: Received head=%p", head);
+    tag->user_data = user_data;
+    tag->head = head;
+    tag->btn_callback = cb;  // ✅ Ensure callback is set
+    ESP_LOGE(TAG, "ADC Button Init: Received head=%p", head);
+
     g_event_bit = xEventGroupCreate();
 
-    audio_thread_create(NULL,
+    audio_thread_create(&tag->audio_thread,
                         "button_task", button_task,
-                        (void *)head,
+                        (void *)tag,
                         task_cfg->task_stack,
-                        5,
+                        task_cfg->task_prio,
                         task_cfg->ext_stack,
-                        0);
+                        task_cfg->task_core);
     
     ESP_LOGE(TAG, "Button Task running on core: %d", xPortGetCoreID());
- }
+}

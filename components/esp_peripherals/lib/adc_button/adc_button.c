@@ -245,7 +245,9 @@ int get_adc_voltage(int channel) {
      return st;
  }
  
- static void button_task(void *parameters) {
+static adc_btn_list *backup_head = NULL;  // Store initial head to detect overwrites
+
+static void button_task(void *parameters) {
     ESP_LOGE(TAG, "Button Task Started");
     ESP_LOGE(TAG, "Button Task running on core: %d", xPortGetCoreID());
     
@@ -266,6 +268,8 @@ int get_adc_voltage(int channel) {
     ESP_LOGE(TAG, "Button Task: tag=%p, tag->head=%p", tag, tag->head);
 
     adc_btn_list *node = tag->head;
+    backup_head = tag->head;  // ✅ Store backup for comparison
+
     while (1) {
         ESP_LOGE(TAG, "Button Task Loop Running");
 
@@ -275,9 +279,19 @@ int get_adc_voltage(int channel) {
         }
 
         while (node) {
-            ESP_LOGE(TAG, "Reading ADC on channel: %d (Node=%p)", node->adc_info.adc_ch, node);
+            ESP_LOGE(TAG, "Checking node: %p, ADC Channel: %d, Next Node: %p", node, node->adc_info.adc_ch, node->next);
+
+            if (backup_head != tag->head) {
+                ESP_LOGE(TAG, "ERROR: tag->head has changed! Expected %p but got %p", backup_head, tag->head);
+            }
+
             int voltage = adc_read((adc_channel_t)node->adc_info.adc_ch);
             ESP_LOGE(TAG, "Channel %d Voltage: %d", node->adc_info.adc_ch, voltage);
+
+            if (node->next == NULL) {
+                ESP_LOGE(TAG, "WARNING: node->next is NULL! List may be truncated.");
+            }
+
             node = node->next;
         }
 
@@ -301,16 +315,18 @@ int get_adc_voltage(int channel) {
      }
  }
  
- void adc_btn_init(void *user_data, adc_button_callback cb, adc_btn_list *head, adc_btn_task_cfg_t *task_cfg) {
+void adc_btn_init(void *user_data, adc_button_callback cb, adc_btn_list *head, adc_btn_task_cfg_t *task_cfg) {
     ESP_LOGE(TAG, "ADC Button Init");
     ESP_LOGE(TAG, "ADC Button Init: Received head=%p", head);
+
     adc_btn_list *node = head;
     while (node) {
+        ESP_LOGE(TAG, "Initializing ADC Channel: %d", node->adc_info.adc_ch);
         ESP_ERROR_CHECK(adc_init(ADC_UNIT_1, node->adc_info.adc_ch));
         node = node->next;
     }
+
     ESP_LOGE(TAG, "Before malloc: Free Heap: %d bytes", esp_get_free_heap_size());
-    //adc_btn_tag_t *tag = (adc_btn_tag_t *)malloc(sizeof(adc_btn_tag_t));
     adc_btn_tag_t *tag = (adc_btn_tag_t *)audio_calloc(1, sizeof(adc_btn_tag_t));
 
     ESP_ERROR_CHECK_WITHOUT_ABORT(tag ? ESP_OK : ESP_ERR_NO_MEM);
@@ -319,23 +335,32 @@ int get_adc_voltage(int channel) {
         ESP_LOGE(TAG, "Memory allocation failed!");
         return;
     }
-    ESP_LOGE(TAG, "ADC Button Init: ADC Channel=%d, Node=%p", head->adc_info.adc_ch, head);
-    ESP_LOGE(TAG, "ADC Button Init: Received head=%p", head);
+
+    ESP_LOGE(TAG, "ADC Button Init: Assigning tag->head");
     tag->user_data = user_data;
-    tag->head = head;
-    tag->btn_callback = cb;  // ✅ Ensure callback is set
-    ESP_LOGE(TAG, "ADC Button Init: Received head=%p", head);
+    tag->head = head;  // ✅ Assign correct head
+    tag->btn_callback = cb;
+
+    ESP_LOGE(TAG, "ADC Button Init: tag=%p, tag->head=%p, user_data=%p, callback=%p",
+             tag, tag->head, tag->user_data, tag->btn_callback);
 
     g_event_bit = xEventGroupCreate();
 
-    audio_thread_create(&tag->audio_thread,
-                        "button_task", button_task,
-                        (void *)tag,
-                        task_cfg->task_stack,
-                        task_cfg->task_prio,
-                        task_cfg->ext_stack,
-                        task_cfg->task_core);
-    
+    ESP_LOGE(TAG, "Creating Button Task...");
+    esp_err_t err = audio_thread_create(&tag->audio_thread,
+                                        "button_task", button_task,
+                                        (void *)tag,
+                                        task_cfg->task_stack,
+                                        task_cfg->task_prio,
+                                        task_cfg->ext_stack,
+                                        task_cfg->task_core);
+
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "ERROR: Button Task Creation Failed! err=%d", err);
+    } else {
+        ESP_LOGE(TAG, "Button Task Successfully Created!");
+    }
+
     ESP_LOGE(TAG, "Button Task running on core: %d", xPortGetCoreID());
     ESP_LOGE(TAG, "Button Task Handle: %p", tag->audio_thread);
 }

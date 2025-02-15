@@ -36,7 +36,7 @@
  
  #define ADC_BUTTON_STACK_SIZE           2500
  #define ADC_BUTTON_TASK_PRIORITY        10
- #define ADC_BUTTON_TASK_CORE_ID         0
+ #define ADC_BUTTON_TASK_CORE_ID         1
  
  /**
   * @brief      The configuration of ADC Button

@@ -388,7 +388,7 @@ void adc_btn_init(void *user_data, adc_button_callback cb, adc_btn_list *head, a
                                         task_cfg->task_stack,
                                         task_cfg->task_prio,
                                         task_cfg->ext_stack,
-                                        task_cfg->task_core);
+                                        1);
 
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "ERROR: Button Task Creation Failed! err=%d", err);

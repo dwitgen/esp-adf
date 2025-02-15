@@ -285,7 +285,7 @@ static adc_btn_list *backup_head = NULL;  // Store initial head to detect overwr
 static void button_task(void *parameters) {
     ESP_LOGE(TAG, "Button Task Started");
     ESP_LOGE(TAG, "Button Task running on core: %d", xPortGetCoreID());
-    
+
     adc_btn_tag_t *tag = (adc_btn_tag_t *)parameters;
 
     if (!tag) {
@@ -294,46 +294,29 @@ static void button_task(void *parameters) {
         return;
     }
 
-    if (!tag->head) {
-        ESP_LOGE(TAG, "ERROR: tag->head is NULL in button_task!");
-        vTaskDelete(NULL);
-        return;
-    }
-
-    ESP_LOGE(TAG, "Button Task: tag=%p, tag->head=%p", tag, tag->head);
-
-    adc_btn_list *node = tag->head;
-    backup_head = tag->head;  // ✅ Store backup for comparison
+    ESP_LOGE(TAG, "Button Task: tag=%p, ADC Channel=%d, Callback=%p", tag, tag->adc_channel, tag->btn_callback);
 
     while (1) {
         ESP_LOGE(TAG, "Button Task Loop Running");
 
-        if (!node) {
-            ESP_LOGE(TAG, "ERROR: node is NULL in button_task!");
-            break;
-        }
+        int voltage = adc_read(tag->adc_channel);
+        ESP_LOGE(TAG, "Channel %d Voltage: %d", tag->adc_channel, voltage);
 
-        while (node) {
-            ESP_LOGE(TAG, "Checking node: %p, ADC Channel: %d, Next Node: %p", node, node->adc_info.adc_ch, node->next);
+        // ✅ Check if voltage falls within a button press range (adjust thresholds based on your hardware)
+        if (voltage > 300 && voltage < 4000) {  // Example threshold for a button press
+            ESP_LOGE(TAG, "Detected Button Press! Voltage: %d", voltage);
 
-            if (backup_head != tag->head) {
-                ESP_LOGE(TAG, "ERROR: tag->head has changed! Expected %p but got %p", backup_head, tag->head);
+            if (tag->btn_callback) {
+                ESP_LOGE(TAG, "Triggering btn_callback...");
+                tag->btn_callback(tag->user_data, tag->adc_channel, 0, ADC_BTN_STATE_PRESSED);
+            } else {
+                ESP_LOGE(TAG, "ERROR: btn_callback is NULL! Button press detected but no function registered.");
             }
-
-            int voltage = adc_read((adc_channel_t)node->adc_info.adc_ch);
-            ESP_LOGE(TAG, "Channel %d Voltage: %d", node->adc_info.adc_ch, voltage);
-
-            if (node->next == NULL) {
-                ESP_LOGE(TAG, "WARNING: node->next is NULL! List may be truncated.");
-            }
-
-            node = node->next;
         }
 
         vTaskDelay(pdMS_TO_TICKS(500));
     }
 }
-
 
 
 
@@ -350,16 +333,8 @@ static void button_task(void *parameters) {
      }
  }
  
-void adc_btn_init(void *user_data, adc_button_callback cb, adc_btn_list *head, adc_btn_task_cfg_t *task_cfg) {
+ void adc_btn_init(void *user_data, adc_button_callback cb, adc_btn_task_cfg_t *task_cfg) {
     ESP_LOGE(TAG, "ADC Button Init");
-    ESP_LOGE(TAG, "ADC Button Init: Received head=%p", head);
-
-    adc_btn_list *node = head;
-    while (node) {
-        ESP_LOGE(TAG, "Initializing ADC Channel: %d", node->adc_info.adc_ch);
-        ESP_ERROR_CHECK(adc_init(ADC_UNIT_1, node->adc_info.adc_ch));
-        node = node->next;
-    }
 
     ESP_LOGE(TAG, "Before malloc: Free Heap: %d bytes", esp_get_free_heap_size());
     adc_btn_tag_t *tag = (adc_btn_tag_t *)audio_calloc(1, sizeof(adc_btn_tag_t));
@@ -371,13 +346,13 @@ void adc_btn_init(void *user_data, adc_button_callback cb, adc_btn_list *head, a
         return;
     }
 
-    ESP_LOGE(TAG, "ADC Button Init: Assigning tag->head");
+    ESP_LOGE(TAG, "ADC Button Init: Assigning ADC Channel 7 to tag");
     tag->user_data = user_data;
-    tag->head = head;  // ✅ Assign correct head
+    tag->adc_channel = ADC_CHANNEL_7;  // ✅ Store ADC channel directly
     tag->btn_callback = cb;
 
-    ESP_LOGE(TAG, "ADC Button Init: tag=%p, tag->head=%p, user_data=%p, callback=%p",
-             tag, tag->head, tag->user_data, tag->btn_callback);
+    ESP_LOGE(TAG, "ADC Button Init: tag=%p, ADC Channel=%d, user_data=%p, callback=%p",
+             tag, tag->adc_channel, tag->user_data, tag->btn_callback);
 
     g_event_bit = xEventGroupCreate();
 
@@ -397,5 +372,4 @@ void adc_btn_init(void *user_data, adc_button_callback cb, adc_btn_list *head, a
     }
 
     ESP_LOGE(TAG, "Button Task running on core: %d", xPortGetCoreID());
-    ESP_LOGE(TAG, "Button Task Handle: %p", tag->audio_thread);
 }

@@ -1,4 +1,4 @@
-/*
+ /*
  * ESPRESSIF MIT License
  *
  * Copyright (c) 2018 <ESPRESSIF SYSTEMS (SHANGHAI) PTE LTD>
@@ -26,15 +26,19 @@
  #include <stdlib.h>
  #include "freertos/FreeRTOS.h"
  #include "freertos/event_groups.h"
+ //#include "driver/adc.h"
+ #include "math.h"
  #include "audio_mem.h"
+ //#include "esp_adc_cal.h"
  #include "string.h"
  #include "adc_button.h"
  #include "esp_log.h"
  #include "audio_thread.h"
  #include "audio_idf_version.h"
- #include <esp_adc/adc_oneshot.h> 
- #include <esp_adc/adc_cali.h> 
- #include <esp_adc/adc_cali_scheme.h> 
+ 
+ #include <esp_adc/adc_oneshot.h>
+ #include <esp_adc/adc_cali.h>
+ #include <esp_adc/adc_cali_scheme.h>
  
  #if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0))
  #define ADC_ATTEN_11db ADC_ATTEN_DB_11
@@ -59,47 +63,6 @@
  
  static char *TAG = "ADC_BTN";
  static EventGroupHandle_t g_event_bit;
-
- static adc_oneshot_unit_handle_t adc_handle;
- static adc_cali_handle_t cali_handle;
-
- esp_err_t adc_init(adc_unit_t unit, adc_channel_t channel) {
-    ESP_LOGE(TAG, "Initializing adc unit: %d on channel: %d", unit, channel);
-    adc_oneshot_unit_init_cfg_t init_config = {
-        .unit_id = unit,
-        .ulp_mode = ADC_ULP_MODE_DISABLE,
-    };
-    ESP_ERROR_CHECK(adc_oneshot_new_unit(&init_config, &adc_handle));
-
-    adc_oneshot_chan_cfg_t ch_config = {
-        .atten = ADC_ATTEN_DB_12,
-        .bitwidth = ADC_BITWIDTH_DEFAULT,
-    };
-    ESP_ERROR_CHECK(adc_oneshot_config_channel(adc_handle, channel, &ch_config));
-
-    adc_cali_curve_fitting_config_t cali_config = {
-        .unit_id = unit,
-        .atten = ADC_ATTEN_DB_12,
-        .bitwidth = ADC_BITWIDTH_DEFAULT,
-    };
-    ESP_ERROR_CHECK(adc_cali_create_scheme_curve_fitting(&cali_config, &cali_handle));
-
-    return ESP_OK;
-}
-
-int adc_read(adc_channel_t channel) {
-    ESP_LOGE(TAG, "Reading adc on channel: %d", channel);
-    int raw = 0, voltage = 0;
-    ESP_ERROR_CHECK(adc_oneshot_read(adc_handle, channel, &raw));
-    ESP_ERROR_CHECK(adc_cali_raw_to_voltage(cali_handle, raw, &voltage));
-    return voltage;
-}
-
-esp_err_t adc_deinit(void) {
-    ESP_ERROR_CHECK(adc_oneshot_del_unit(adc_handle));
-    ESP_ERROR_CHECK(adc_cali_delete_scheme(cali_handle));
-    return ESP_OK;
-}
  
  typedef struct {
      adc_button_callback btn_callback;
@@ -112,75 +75,76 @@ esp_err_t adc_deinit(void) {
  static const int DESTROY_BIT = BIT0;
  static bool _task_flag;
  
-//adc_btn_list *adc_btn_create_list(adc_arr_t *adc_conf, int channels) {
-//    adc_btn_list *head = NULL, *node = NULL, *find = NULL;
-//    for (int i = 0; i < channels; i++) {
-//        node = (adc_btn_list *)audio_calloc(1, sizeof(adc_btn_list));
-//        if (!node) return NULL;
-
-//        memcpy(&node->adc_info, &adc_conf[i], sizeof(adc_arr_t));
-//        node->next = NULL;
-//
-//        if (!head) {
-//            head = node;
-//            find = head;
-//        } else {
-//            find->next = node;
-//            find = node;
-//        }
-//    }
-//    return head;
-//}
-
-adc_btn_list *adc_btn_create_list(adc_arr_t *adc_conf, int channels) {
-    if (adc_conf == NULL || channels == 0) {
-        ESP_LOGE(TAG, "Invalid ADC config or zero channels.");
-        return NULL;
-    }
-
-    ESP_LOGI(TAG, "Creating ADC button list with %d channels", channels);
-
-    adc_btn_list *head = NULL, *node = NULL, *find = NULL;
-    for (int i = 0; i < channels; i++) {
-        node = (adc_btn_list *)audio_calloc(1, sizeof(adc_btn_list));
-        if (!node) {
-            ESP_LOGE(TAG, "Failed to allocate memory for button %d", i);
-            return NULL;
-        }
-
-        memcpy(&node->adc_info, &adc_conf[i], sizeof(adc_arr_t));
-        node->next = NULL;
-
-        if (!head) {
-            head = node;
-            find = head;
-        } else {
-            find->next = node;
-            find = node;
-        }
-
-        ESP_LOGE(TAG, "Added button %d on channel %d (Node=%p, Next=%p)", 
-                 i, node->adc_info.adc_ch, node, node->next);
-    }
-
-    return head;
-}
-
-esp_err_t adc_btn_destroy_list(adc_btn_list *head) {
-    adc_btn_list *current = head, *temp;
-    ESP_LOGE(TAG, "Destroying adc button list");
-    while (current) {
-        temp = current->next;
-        audio_free(current);
-        current = temp;
-    }
-    return ESP_OK;
-}
-
-int get_adc_voltage(int channel) {
-    ESP_LOGE(TAG, "Getting adc voltage on channel: %d", channel);
-    return adc_read(channel);
-}
+ adc_btn_list *adc_btn_create_list(adc_arr_t *adc_conf, int channels)
+ {
+     adc_btn_list *head = NULL;
+     adc_btn_list *node = NULL;
+     adc_btn_list *find = NULL;
+     for (int i = 0; i < channels; i++) {
+         node = (adc_btn_list *)audio_calloc(1, sizeof(adc_btn_list));
+         if (NULL == node) {
+             ESP_LOGE(TAG, "Memory allocation failed! Line: %d", __LINE__);
+             return NULL;
+         }
+         memset(node, 0, sizeof(adc_btn_list));
+         adc_arr_t *info = &(node->adc_info);
+         memcpy(info, adc_conf + i, sizeof(adc_arr_t));
+         info->adc_level_step = (int *)audio_calloc(1, (info->total_steps + 1) * sizeof(int));
+         memset(info->adc_level_step, 0, (info->total_steps + 1) * sizeof(int));
+         if (NULL == info->adc_level_step) {
+             ESP_LOGE(TAG, "Memory allocation failed! Line: %d", __LINE__);
+             audio_free(node);
+             return NULL;
+         }
+         if (adc_conf[i].adc_level_step == NULL) {
+             memcpy(info->adc_level_step, default_step_level, USER_KEY_MAX * sizeof(int));
+         } else {
+             memcpy(info->adc_level_step, adc_conf[i].adc_level_step, (adc_conf[i].total_steps + 1) * sizeof(int));
+         }
+         if (info->total_steps > USER_KEY_MAX) {
+             ESP_LOGE(TAG, "The total_steps should be less than USER_KEY_MAX");
+             audio_free(info->adc_level_step);
+             audio_free(node);
+         }
+         node->btn_dscp = (btn_decription *)audio_calloc(1, sizeof(btn_decription) * (adc_conf[i].total_steps));
+         if (NULL == node->btn_dscp) {
+             ESP_LOGE(TAG, "Memory allocation failed! Line: %d", __LINE__);
+             audio_free(info->adc_level_step);
+             audio_free(node);
+         }
+         memset(node->btn_dscp, 0, sizeof(btn_decription) * (adc_conf[i].total_steps));
+         node->next = NULL;
+         if (NULL == head) {
+             head = node;
+             find = head;
+         } else {
+             find->next = node;
+             find = node;
+         }
+     }
+     return head;
+ }
+ 
+ esp_err_t adc_btn_destroy_list(adc_btn_list *head)
+ {
+     if (head == NULL) {
+         ESP_LOGD(TAG, "The head of list is null");
+         return ESP_OK;
+     }
+     adc_btn_list *find = head;
+     adc_btn_list *tmp = find;
+ 
+     while (find) {
+         adc_arr_t *info = &(find->adc_info);
+         tmp = find->next;
+         audio_free(find->btn_dscp);
+         audio_free(info->adc_level_step);
+         audio_free(find);
+         find = tmp;
+     }
+     return ESP_OK;
+ }
+ 
  static int get_button_id(adc_btn_list *node, int adc)
  {
      int m = ADC_BTN_INVALID_ID;
@@ -280,46 +244,156 @@ int get_adc_voltage(int channel) {
      return st;
  }
  
-static adc_btn_list *backup_head = NULL;  // Store initial head to detect overwrites
-
-static void button_task(void *parameters) {
-    ESP_LOGE(TAG, "Button Task Started");
-    ESP_LOGE(TAG, "Button Task running on core: %d", xPortGetCoreID());
-
-    adc_btn_tag_t *tag = (adc_btn_tag_t *)parameters;
-
-    if (!tag) {
-        ESP_LOGE(TAG, "ERROR: Received NULL tag in button_task!");
-        vTaskDelete(NULL);
-        return;
-    }
-
-    ESP_LOGE(TAG, "Button Task: tag=%p, ADC Channel=%d, Callback=%p", tag, tag->adc_channel, tag->btn_callback);
-
-    while (1) {
-        ESP_LOGE(TAG, "Button Task Loop Running");
-
-        int voltage = adc_read(tag->adc_channel);
-        ESP_LOGE(TAG, "Channel %d Voltage: %d", tag->adc_channel, voltage);
-
-        // ✅ Check if voltage falls within a button press range (adjust thresholds based on your hardware)
-        if (voltage > 300 && voltage < 4000) {  // Example threshold for a button press
-            ESP_LOGE(TAG, "Detected Button Press! Voltage: %d", voltage);
-
-            if (tag->btn_callback) {
-                ESP_LOGE(TAG, "Triggering btn_callback...");
-                tag->btn_callback(tag->user_data, tag->adc_channel, 0, ADC_BTN_STATE_PRESSED);
-            } else {
-                ESP_LOGE(TAG, "ERROR: btn_callback is NULL! Button press detected but no function registered.");
-            }
-        }
-
-        vTaskDelay(pdMS_TO_TICKS(500));
-    }
-}
-
-
-
+ static adc_oneshot_unit_handle_t adc1_handle;
+ static adc_cali_handle_t adc1_cali_handle;
+ 
+ static bool setup_adc_calibration(adc_unit_t unit, adc_channel_t channel, adc_atten_t atten, adc_cali_handle_t *cali_handle) {
+     adc_cali_handle_t handle = NULL;
+     esp_err_t ret = ESP_FAIL;
+     bool calibrated = false;
+ 
+ #if ADC_CALI_SCHEME_CURVE_FITTING_SUPPORTED
+     if (!calibrated) {
+         adc_cali_curve_fitting_config_t cali_config = {
+             .unit_id = unit,
+             .chan = channel,
+             .atten = atten,
+             .bitwidth = ADC_BITWIDTH_DEFAULT,
+         };
+         ret = adc_cali_create_scheme_curve_fitting(&cali_config, &handle);
+         if (ret == ESP_OK) {
+             ESP_LOGI(TAG, "ADC Calibration Successful (Curve Fitting)");
+             calibrated = true;
+         } else {
+             ESP_LOGW(TAG, "ADC Calibration Not Supported or Skipped");
+         }
+     }
+ #endif
+ 
+ #if ADC_CALI_SCHEME_LINE_FITTING_SUPPORTED
+     if (!calibrated) {
+         adc_cali_line_fitting_config_t cali_config = {
+             .unit_id = unit,
+             .atten = atten,
+             .bitwidth = ADC_BITWIDTH_DEFAULT,
+         };
+         ret = adc_cali_create_scheme_line_fitting(&cali_config, &handle);
+         if (ret == ESP_OK) {
+             ESP_LOGI(TAG, "ADC Calibration Successful (Line Fitting)");
+             calibrated = true;
+         } else {
+             ESP_LOGW(TAG, "ADC Calibration Not Supported or Skipped");
+         }
+     }
+ #endif
+ 
+     *cali_handle = handle;
+     if (ret == ESP_OK) {
+         ESP_LOGI(TAG, "ADC Calibration Scheme Created Successfully");
+     } else if (ret == ESP_ERR_NOT_SUPPORTED || !calibrated) {
+         ESP_LOGW(TAG, "eFuse not burnt, skip software calibration");
+     } else {
+         ESP_LOGE(TAG, "ADC Calibration Scheme Creation Failed: %s (%d)", esp_err_to_name(ret), ret);
+     }
+     return calibrated;
+ }
+ 
+ 
+ void adc_init(adc_unit_t unit_id, adc_channel_t channel, adc_atten_t atten, adc_bitwidth_t bitwidth) {
+     adc_oneshot_unit_init_cfg_t init_config = {
+         .unit_id = unit_id,
+     };
+     ESP_ERROR_CHECK(adc_oneshot_new_unit(&init_config, &adc1_handle));
+     
+     adc_oneshot_chan_cfg_t ch_config = {
+         .atten = atten,
+         .bitwidth = bitwidth,
+     };
+     ESP_ERROR_CHECK(adc_oneshot_config_channel(adc1_handle, channel, &ch_config));
+     
+     bool adc_calibrated = setup_adc_calibration(unit_id, channel, atten, &adc1_cali_handle);
+     if (!adc_calibrated) {
+         ESP_LOGW(TAG, "ADC calibration failed");
+     }
+ }
+ 
+ static void button_task(void *parameters) {
+     _task_flag = true;
+     adc_btn_tag_t *tag = (adc_btn_tag_t *)parameters;
+     adc_btn_list *head = tag->head;
+     adc_btn_list *find = head;
+     xEventGroupClearBits(g_event_bit, DESTROY_BIT);
+ 
+     // ADC initialization
+     adc_init(ADC_UNIT_1, ADC_CHANNEL_7, ADC_ATTEN_DB_12, ADC_BITWIDTH_12);
+ 
+     while (find) {
+         adc_arr_t *info = &(find->adc_info);
+         reset_btn(find->btn_dscp, info->total_steps);
+         find = find->next;
+     }
+     find = head;
+ 
+     static adc_btn_state_t cur_state = ADC_BTN_STATE_ADC;
+     adc_btn_state_t btn_st = ADC_BTN_STATE_IDLE;
+     int cur_act_id = ADC_BTN_INVALID_ACT_ID;
+     while (_task_flag) {
+         find = head;
+         while (find) {
+             adc_arr_t *info = &(find->adc_info);
+             int act_id = ADC_BTN_INVALID_ACT_ID;
+             btn_decription *btn_dscp = find->btn_dscp;
+             switch (cur_state) {
+                 case ADC_BTN_STATE_ADC: {
+                         int adc_value;
+                         ESP_ERROR_CHECK(adc_oneshot_read(adc1_handle, info->adc_ch, &adc_value));
+                         ESP_LOGD(TAG, "ADC:%d", adc_value);
+                         for (int i = 0; i < info->total_steps; ++i) {
+                             if (btn_dscp[i].active_id > ADC_BTN_INVALID_ID) {
+                                 act_id = i;
+                                 break;
+                             }
+                         }
+                         btn_st = get_adc_btn_state(adc_value, act_id, find);
+                         if (btn_st != ADC_BTN_STATE_IDLE) {
+                             cur_act_id = act_id;
+                             cur_state = btn_st;
+                             ESP_LOGD(TAG, "ADC ID:%d", act_id);
+                         }
+                         break;
+                     }
+                 case ADC_BTN_STATE_PRESSED:
+                     tag->btn_callback((void *)tag->user_data, info->adc_ch, cur_act_id, ADC_BTN_STATE_PRESSED);
+                     cur_state = ADC_BTN_STATE_ADC;
+                     break;
+                 case ADC_BTN_STATE_LONG_PRESSED:
+                     tag->btn_callback((void *)tag->user_data, info->adc_ch, cur_act_id, ADC_BTN_STATE_LONG_PRESSED);
+                     cur_state = ADC_BTN_STATE_ADC;
+                     break;
+                 case ADC_BTN_STATE_LONG_RELEASE:
+                     tag->btn_callback((void *)tag->user_data, info->adc_ch, cur_act_id, ADC_BTN_STATE_LONG_RELEASE);
+                     cur_state = ADC_BTN_STATE_ADC;
+                     break;
+                 case ADC_BTN_STATE_RELEASE:
+                     tag->btn_callback((void *)tag->user_data, info->adc_ch, cur_act_id, ADC_BTN_STATE_RELEASE);
+                     cur_state = ADC_BTN_STATE_ADC;
+                     break;
+                 default:
+                     ESP_LOGE(TAG, "Not support state %d", cur_state);
+                     break;
+             }
+             find = find->next;
+         }
+ 
+         vTaskDelay(ADC_SAMPLE_INTERVAL_TIME_MS / portTICK_PERIOD_MS);
+     }
+ 
+     if (g_event_bit) {
+         xEventGroupSetBits(g_event_bit, DESTROY_BIT);
+     }
+     audio_free(tag);
+     vTaskDelete(NULL);
+ }
  void adc_btn_delete_task(void)
  {
      if (_task_flag) {
@@ -333,43 +407,25 @@ static void button_task(void *parameters) {
      }
  }
  
- void adc_btn_init(void *user_data, adc_button_callback cb, adc_btn_task_cfg_t *task_cfg) {
-    ESP_LOGE(TAG, "ADC Button Init");
-
-    ESP_LOGE(TAG, "Before malloc: Free Heap: %d bytes", esp_get_free_heap_size());
-    adc_btn_tag_t *tag = (adc_btn_tag_t *)audio_calloc(1, sizeof(adc_btn_tag_t));
-
-    ESP_ERROR_CHECK_WITHOUT_ABORT(tag ? ESP_OK : ESP_ERR_NO_MEM);
-    ESP_LOGE(TAG, "After malloc: Free Heap: %d bytes", esp_get_free_heap_size());
-    if (!tag) {
-        ESP_LOGE(TAG, "Memory allocation failed!");
-        return;
-    }
-
-    ESP_LOGE(TAG, "ADC Button Init: Assigning ADC Channel 7 to tag");
-    tag->user_data = user_data;
-    tag->adc_channel = ADC_CHANNEL_7;  // ✅ Store ADC channel directly
-    tag->btn_callback = cb;
-
-    ESP_LOGE(TAG, "ADC Button Init: tag=%p, ADC Channel=%d, user_data=%p, callback=%p",
-             tag, tag->adc_channel, tag->user_data, tag->btn_callback);
-
-    g_event_bit = xEventGroupCreate();
-
-    ESP_LOGE(TAG, "Creating Button Task...");
-    esp_err_t err = audio_thread_create(&tag->audio_thread,
-                                        "button_task", button_task,
-                                        (void *)tag,
-                                        task_cfg->task_stack,
-                                        task_cfg->task_prio,
-                                        task_cfg->ext_stack,
-                                        task_cfg->task_core);
-
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "ERROR: Button Task Creation Failed! err=%d", err);
-    } else {
-        ESP_LOGE(TAG, "Button Task Successfully Created!");
-    }
-
-    ESP_LOGE(TAG, "Button Task running on core: %d", xPortGetCoreID());
-}
+ void adc_btn_init(void *user_data, adc_button_callback cb, adc_btn_list *head, adc_btn_task_cfg_t *task_cfg)
+ {
+     adc_btn_tag_t *tag = audio_calloc(1, sizeof(adc_btn_tag_t));
+     if (NULL == tag) {
+         ESP_LOGE(TAG, "Memory allocation failed! Line: %d", __LINE__);
+         return;
+     }
+     tag->user_data = user_data;
+     tag->head = head;
+     tag->btn_callback = cb;
+ 
+     g_event_bit = xEventGroupCreate();
+ 
+     audio_thread_create(&tag->audio_thread,
+                         "button_task", button_task,
+                         (void *)tag,
+                         task_cfg->task_stack,
+                         task_cfg->task_prio,
+                         task_cfg->ext_stack,
+                         task_cfg->task_core);
+ }
+ 

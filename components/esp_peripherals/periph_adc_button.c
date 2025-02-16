@@ -23,89 +23,497 @@
  */
 
  #include <string.h>
+ #include "sys/queue.h"
+ #include "driver/gpio.h"
  #include "esp_log.h"
- #include "audio_error.h"
- #include "periph_adc_button.h"
+ #include "audio_event_iface.h"
+ #include "audio_mutex.h"
+ #include "esp_peripherals.h"
+ #include "audio_thread.h"
  #include "audio_mem.h"
+ #include "audio_idf_version.h"
  
- static const char *TAG = "PERIPH_ADC_BUTTON";
+ static const char *TAG = "ESP_PERIPH";
  
- typedef struct {
-     int adc_channels;
-     adc_btn_list *list;
-     adc_btn_task_cfg_t task_cfg;
- } periph_adc_btn_t;
+ #define DEFAULT_ESP_PERIPH_WAIT_TICK       (10/portTICK_PERIOD_MS)
  
- static void btn_cb(void *user_data, int adc, int id, adc_btn_state_t state)
+ struct esp_periph {
+     char                       *tag;
+     bool                        disabled;
+     esp_periph_id_t             periph_id;
+     esp_periph_func             init;
+     esp_periph_run_func         run;
+     esp_periph_func             destroy;
+     esp_periph_state_t          state;
+     void                       *source;
+     void                       *periph_data;
+     esp_periph_event_t         *on_evt;
+     TimerHandle_t               timer;
+     STAILQ_ENTRY(esp_periph)    entries;
+ };
+ 
+ typedef struct esp_periph_sets {
+     EventGroupHandle_t                              state_event_bits;
+     SemaphoreHandle_t                                lock;
+     int                                             task_stack;
+     int                                             task_prio;
+     int                                             task_core;
+     audio_thread_t                                  audio_thread;
+     bool                                            ext_stack;
+     bool                                            run;
+     esp_periph_event_t                              event_handle;
+     int                                             periph_dynamic_id;
+     STAILQ_HEAD(esp_periph_list_item, esp_periph)   periph_list;
+ } esp_periph_set_t;
+ 
+ static const int STARTED_BIT = BIT0;
+ static const int STOPPED_BIT = BIT1;
+ 
+ static esp_err_t esp_periph_wait_for_stop(esp_periph_set_handle_t periph_set_handle, TickType_t ticks_to_wait);
+ 
+ static esp_err_t process_peripheral_event(audio_event_iface_msg_t *msg, void *context)
  {
-     esp_periph_handle_t self = (esp_periph_handle_t)user_data;
-     periph_adc_button_event_id_t event_id = PERIPH_ADC_BUTTON_IDLE;
-     if (state == ADC_BTN_STATE_PRESSED) {
-         event_id = PERIPH_ADC_BUTTON_PRESSED;
-     } else if (state == ADC_BTN_STATE_LONG_PRESSED) {
-         event_id = PERIPH_ADC_BUTTON_LONG_PRESSED;
-     } else if (state == ADC_BTN_STATE_RELEASE) {
-         event_id = PERIPH_ADC_BUTTON_RELEASE;
-     } else if (state == ADC_BTN_STATE_LONG_RELEASE) {
-         event_id = PERIPH_ADC_BUTTON_LONG_RELEASE;
+     esp_periph_handle_t periph_evt = (esp_periph_handle_t) msg->source;
+     esp_periph_handle_t periph;
+     esp_periph_set_t *sets = context;
+     STAILQ_FOREACH(periph, &sets->periph_list, entries) {
+         if (periph->periph_id == periph_evt->periph_id
+             && periph_evt->state == PERIPH_STATE_RUNNING
+             && periph_evt->run
+             && !periph_evt->disabled) {
+             return periph_evt->run(periph_evt, msg);
+         }
      }
-     //Send ID as data and ADC as data_len
-     esp_periph_send_event(self, event_id, (void *)id, adc);
+     return ESP_OK;
  }
  
- static esp_err_t _adc_button_destroy(esp_periph_handle_t self) {
-    adc_btn_delete_task();  // Clean up the button task
-    periph_adc_btn_t *periph_adc_btn = esp_periph_get_data(self);
-    if (periph_adc_btn) {
-        adc_btn_destroy_list(periph_adc_btn->list);
-        audio_free(periph_adc_btn);
-    }
-    return ESP_OK;
-}
- 
- static esp_err_t _adc_button_init(esp_periph_handle_t self) {
-    periph_adc_btn_t *periph_adc_btn = esp_periph_get_data(self);
-    if (periph_adc_btn && periph_adc_btn->list) {
-        adc_btn_init((void *)self, btn_cb, periph_adc_btn->list, &periph_adc_btn->task_cfg);
-    } else {
-        ESP_LOGE(TAG, "ADC button list is NULL.");
-        return ESP_FAIL;
-    }
-    return ESP_OK;
-}
- 
- esp_periph_handle_t periph_adc_button_init(periph_adc_button_cfg_t *config)
+ esp_err_t esp_periph_set_change_waiting_time(esp_periph_set_handle_t periph_set_handle, int time_ms)
  {
-    ESP_LOGE(TAG, "Initializing ADC Button Peripheral..."); 
-    esp_periph_handle_t periph = esp_periph_create(PERIPH_ID_ADC_BTN, "periph_adc_btn");
-     AUDIO_MEM_CHECK(TAG, periph, return NULL);
+     audio_event_iface_set_cmd_waiting_timeout(esp_periph_set_get_event_iface(periph_set_handle), time_ms / portTICK_PERIOD_MS);
+     return ESP_OK;
+ }
  
-     periph_adc_btn_t *periph_adc_btn = audio_calloc(1, sizeof(periph_adc_btn_t));
-     AUDIO_MEM_CHECK(TAG, periph_adc_btn, {
-         audio_free(periph);
-         return NULL;
-     });
-     if (periph_adc_btn == NULL) {
-        ESP_LOGE(TAG, "Failed to allocate memory for ADC button peripheral");
-        return NULL;
-    } else {
-        ESP_LOGE(TAG, "Memory allocated for ADC button peripheral");
-    }
-     periph_adc_btn->adc_channels = config->arr_size;
-     periph_adc_btn->list = adc_btn_create_list(config->arr, config->arr_size);
-    if (periph_adc_btn->list == NULL) {
-        ESP_LOGE(TAG, "Failed to create ADC button list");
-    } else {
-        ESP_LOGE(TAG, "ADC button list created successfully");
-    }
-     memcpy(&periph_adc_btn->task_cfg, &config->task_cfg, sizeof(adc_btn_task_cfg_t));
-     AUDIO_MEM_CHECK(TAG, periph_adc_btn->list, {
-         audio_free(periph);
-         audio_free(periph_adc_btn);
-         return NULL;
+ static void esp_periph_task(void *pv)
+ {
+     esp_periph_handle_t periph;
+     esp_periph_set_handle_t periph_set_handle = (esp_periph_set_handle_t)pv;
+     ESP_LOGD(TAG, "esp_periph_task is running, handle:%p", periph_set_handle);
+     xEventGroupSetBits(periph_set_handle->state_event_bits, STARTED_BIT);
+     xEventGroupClearBits(periph_set_handle->state_event_bits, STOPPED_BIT);
+ 
+     while (periph_set_handle->run) {
+         mutex_lock(periph_set_handle->lock);
+         STAILQ_FOREACH(periph, &periph_set_handle->periph_list, entries) {
+             if (periph->disabled) {
+                 continue;
+             }
+             if (periph->state == PERIPH_STATE_INIT && periph->init) {
+                 ESP_LOGD(TAG, "PERIPH[%s]->init", periph->tag);
+                 if (periph->init(periph) == ESP_OK) {
+                     periph->state = PERIPH_STATE_RUNNING;
+                 } else {
+                     periph->state = PERIPH_STATE_ERROR;
+                 }
+             }
+         }
+         mutex_unlock(periph_set_handle->lock);
+         audio_event_iface_waiting_cmd_msg(esp_periph_set_get_event_iface(periph_set_handle));
+     }
+     STAILQ_FOREACH(periph, &periph_set_handle->periph_list, entries) {
+         esp_periph_stop_timer(periph);
+         if (periph->destroy) {
+             periph->destroy(periph);
+         }
+     }
+     xEventGroupClearBits(periph_set_handle->state_event_bits, STARTED_BIT);
+     xEventGroupSetBits(periph_set_handle->state_event_bits, STOPPED_BIT);
+ 
+     vTaskDelete(NULL);
+ }
+ 
+ esp_periph_set_handle_t esp_periph_set_init(esp_periph_config_t *config)
+ {
+     esp_err_t ret = ESP_OK;
+     esp_periph_set_t *periph_sets = NULL;
+     int _err_step = 1;
+     bool _success =
+         (
+             (periph_sets                   = audio_calloc(1, sizeof(esp_periph_set_t))) && _err_step ++ &&
+             (periph_sets->state_event_bits = xEventGroupCreate())                  && _err_step ++ &&
+             (periph_sets->lock             = mutex_create())                       && _err_step ++
+         );
+ 
+     AUDIO_MEM_CHECK(TAG, _success, {
+         goto _periph_init_failed;
      });
  
-     esp_periph_set_data(periph, periph_adc_btn);
-     esp_periph_set_function(periph, _adc_button_init, NULL, _adc_button_destroy);
-     return periph;
+     STAILQ_INIT(&periph_sets->periph_list);
+ 
+     //TODO: Should we uninstall gpio isr service??
+     //TODO: Because gpio need for sdcard and gpio, then install isr here
+     ret = gpio_install_isr_service(ESP_INTR_FLAG_LEVEL2);
+     if (ret == ESP_ERR_NOT_FOUND) {
+         ESP_LOGE(TAG, "No free interrupt found with ESP_INTR_FLAG_LEVEL2");
+ #if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0))
+         ESP_LOGE(TAG,"Select an available interrupt level based on the interrupt table below");
+         esp_intr_dump(stdout);
+ #endif // ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0)
+     }
+ 
+     periph_sets->run = false;
+     xEventGroupClearBits(periph_sets->state_event_bits, STARTED_BIT);
+     xEventGroupSetBits(periph_sets->state_event_bits, STOPPED_BIT);
+     periph_sets->task_stack = config->task_stack;
+     periph_sets->task_prio = config->task_prio;
+     periph_sets->task_core = config->task_core;
+     periph_sets->ext_stack = config->extern_stack;
+ 
+     audio_event_iface_cfg_t event_cfg = AUDIO_EVENT_IFACE_DEFAULT_CFG();
+     event_cfg.queue_set_size = 0;
+     event_cfg.context = periph_sets;
+     event_cfg.on_cmd = process_peripheral_event;
+     periph_sets->event_handle.iface = audio_event_iface_init(&event_cfg);
+     periph_sets->periph_dynamic_id = PERIPH_ID_CUSTOM_BASE;
+ 
+     AUDIO_MEM_CHECK(TAG, periph_sets->event_handle.iface, goto _periph_init_failed);
+     audio_event_iface_set_cmd_waiting_timeout(periph_sets->event_handle.iface, DEFAULT_ESP_PERIPH_WAIT_TICK);
+     return periph_sets;
+ 
+ _periph_init_failed:
+     if (periph_sets) {
+         mutex_destroy(periph_sets->lock);
+         vEventGroupDelete(periph_sets->state_event_bits);
+ 
+         if (periph_sets->event_handle.iface) {
+             audio_event_iface_destroy(periph_sets->event_handle.iface);
+         }
+ 
+         audio_free(periph_sets);
+         periph_sets = NULL;
+     }
+     return NULL;
+ }
+ 
+ esp_err_t esp_periph_remove_from_set(esp_periph_set_handle_t periph_set_handle, esp_periph_handle_t periph)
+ {
+     STAILQ_REMOVE(&periph_set_handle->periph_list, periph, esp_periph, entries);
+     esp_periph_register_on_events(periph, NULL);
+     return ESP_OK;
+ }
+ 
+ esp_err_t esp_periph_alloc_periph_id(esp_periph_set_handle_t periph_set_handle, int *periph_id)
+ {
+     if ((periph_set_handle == NULL) || (periph_id == NULL)) {
+         AUDIO_ERROR(TAG, "Invalid parameters: periph_set_handle or periph_id is NULL");
+         return ESP_FAIL;
+     }
+     *periph_id = periph_set_handle->periph_dynamic_id++;
+     return ESP_OK;
+ }
+ 
+ esp_err_t esp_periph_set_destroy(esp_periph_set_handle_t periph_set_handle)
+ {
+     if (periph_set_handle == NULL) {
+         AUDIO_ERROR(TAG, "Peripherals have not been initialized");
+         return ESP_FAIL;
+     }
+     periph_set_handle->run = false;
+     esp_periph_wait_for_stop(periph_set_handle, portMAX_DELAY);
+     esp_periph_handle_t item, tmp;
+     STAILQ_FOREACH_SAFE(item, &periph_set_handle->periph_list, entries, tmp) {
+         STAILQ_REMOVE(&periph_set_handle->periph_list, item, esp_periph, entries);
+         audio_free(item->tag);
+         audio_free(item);
+     }
+     mutex_destroy(periph_set_handle->lock);
+     vEventGroupDelete(periph_set_handle->state_event_bits);
+ 
+     gpio_uninstall_isr_service();
+     audio_event_iface_destroy(periph_set_handle->event_handle.iface);
+     audio_free(periph_set_handle);
+     periph_set_handle = NULL;
+     return ESP_OK;
+ }
+ 
+ esp_err_t esp_periph_set_stop_all(esp_periph_set_handle_t periph_set_handle)
+ {
+     if (periph_set_handle == NULL) {
+         AUDIO_ERROR(TAG, "Peripherals have not been initialized");
+         return ESP_FAIL;
+     }
+     esp_periph_handle_t periph;
+     STAILQ_FOREACH(periph, &periph_set_handle->periph_list, entries) {
+         periph->disabled = true;
+     }
+     return ESP_OK;
+ }
+ 
+ esp_periph_handle_t esp_periph_set_get_by_id(esp_periph_set_handle_t periph_set_handle, int periph_id)
+ {
+     esp_periph_handle_t periph;
+     if (periph_set_handle == NULL) {
+         AUDIO_ERROR(TAG, "Peripherals have not been initialized");
+         return NULL;
+     }
+     mutex_lock(periph_set_handle->lock);
+     STAILQ_FOREACH(periph, &periph_set_handle->periph_list, entries) {
+         if (periph->periph_id == periph_id) {
+             mutex_unlock(periph_set_handle->lock);
+             return periph;
+         }
+     }
+     ESP_LOGD(TAG, "Periph id %d not found", periph_id);
+     mutex_unlock(periph_set_handle->lock);
+     return NULL;
+ }
+ 
+ audio_event_iface_handle_t esp_periph_set_get_event_iface(esp_periph_set_handle_t periph_set_handle)
+ {
+     return periph_set_handle->event_handle.iface;
+ }
+ 
+ esp_err_t esp_periph_set_register_callback(esp_periph_set_handle_t periph_set_handle, esp_periph_event_handle_t cb, void *user_context)
+ {
+     if (periph_set_handle == NULL) {
+         return ESP_FAIL;
+     } else {
+         periph_set_handle->event_handle.cb = cb;
+         periph_set_handle->event_handle.user_ctx = user_context;
+         return ESP_OK;
+     }
+ }
+ 
+ QueueHandle_t esp_periph_set_get_queue(esp_periph_set_handle_t periph_set_handle)
+ {
+     return audio_event_iface_get_queue_handle(periph_set_handle->event_handle.iface);
+ }
+ 
+ esp_err_t esp_periph_wait_for_stop(esp_periph_set_handle_t periph_set_handle, TickType_t ticks_to_wait)
+ {
+     EventGroupHandle_t ev_bits = periph_set_handle->state_event_bits;
+ 
+     EventBits_t uxBits = xEventGroupWaitBits(ev_bits, STOPPED_BIT, false, true, ticks_to_wait);
+     if (uxBits & STOPPED_BIT) {
+         return ESP_OK;
+     }
+     return ESP_FAIL;
+ }
+ 
+ esp_err_t esp_periph_set_list_init(esp_periph_set_handle_t periph_set)
+ {
+     esp_periph_handle_t periph;
+     STAILQ_FOREACH(periph, &periph_set->periph_list, entries) {
+         if (periph->init) {
+             periph->init(periph);
+         }
+     }
+     return ESP_OK;
+ }
+ 
+ esp_err_t esp_periph_set_list_run(esp_periph_set_handle_t periph_set, audio_event_iface_msg_t msg)
+ {
+     esp_periph_handle_t periph;
+     STAILQ_FOREACH(periph, &periph_set->periph_list, entries) {
+         if (periph->run) {
+             periph->run(periph, &msg);
+         }
+     }
+     return ESP_OK;
+ }
+ 
+ esp_err_t esp_periph_set_list_destroy(esp_periph_set_handle_t periph_set)
+ {
+     esp_periph_handle_t periph;
+     STAILQ_FOREACH(periph, &periph_set->periph_list, entries) {
+         if (periph->destroy) {
+             periph->destroy(periph);
+         }
+     }
+     return ESP_OK;
+ }
+ 
+ esp_periph_handle_t esp_periph_create(int periph_id, const char *tag)
+ {
+     esp_periph_handle_t new_entry = audio_calloc(1, sizeof(struct esp_periph));
+ 
+     AUDIO_MEM_CHECK(TAG, new_entry, return NULL);
+     if (tag) {
+         new_entry->tag = audio_strdup(tag);
+     } else {
+         new_entry->tag = audio_strdup("periph");
+     }
+     AUDIO_MEM_CHECK(TAG, new_entry->tag, {
+         audio_free(new_entry);
+         return NULL;
+     })
+     new_entry->state = PERIPH_STATE_INIT;
+     new_entry->periph_id = periph_id;
+     return new_entry;
+ }
+ 
+ esp_err_t esp_periph_set_function(esp_periph_handle_t periph,
+                                   esp_periph_func init,
+                                   esp_periph_run_func run,
+                                   esp_periph_func destroy)
+ {
+     periph->init = init;
+     periph->run = run;
+     periph->destroy = destroy;
+     return ESP_OK;
+ }
+ 
+ esp_err_t esp_periph_start(esp_periph_set_handle_t periph_set_handle, esp_periph_handle_t periph)
+ {
+     if (periph_set_handle == NULL) {
+         AUDIO_ERROR(TAG, "Peripherals have not been initialized");
+         return ESP_FAIL;
+     }
+     if (esp_periph_set_get_by_id(periph_set_handle, periph->periph_id) != NULL) {
+         ESP_LOGI(TAG, "This peripheral has been added");
+         periph->disabled = false;
+     } else {
+         esp_periph_register_on_events(periph, &periph_set_handle->event_handle);
+         STAILQ_INSERT_TAIL(&periph_set_handle->periph_list, periph, entries);
+     }
+     if (periph_set_handle->run == false && periph_set_handle->task_stack > 0) {
+         periph_set_handle->run = true;
+         if (audio_thread_create(&periph_set_handle->audio_thread,
+                                  "esp_periph",
+                                  esp_periph_task,
+                                  periph_set_handle,
+                                  periph_set_handle->task_stack,
+                                  periph_set_handle->task_prio,
+                                  periph_set_handle->ext_stack,
+                                  periph_set_handle->task_core) != ESP_OK) {
+             ESP_LOGE(TAG, "Create [%s] task failed", periph->tag);
+             return ESP_FAIL;
+         }
+     }
+     return ESP_OK;
+ }
+ 
+ esp_err_t esp_periph_stop(esp_periph_handle_t periph)
+ {
+     if (periph) {
+         periph->disabled = true;
+         return ESP_OK;
+     }
+     return ESP_OK;
+ }
+ 
+ esp_err_t esp_periph_send_cmd(esp_periph_handle_t periph, int cmd, void *data, int data_len)
+ {
+     if (periph->on_evt == NULL) {
+         return ESP_FAIL;
+     }
+     audio_event_iface_msg_t msg;
+     msg.cmd = cmd;
+     msg.source = periph;
+     msg.source_type = periph->periph_id;
+     msg.data = (void *)data;
+     msg.data_len = data_len;
+     return audio_event_iface_cmd(periph->on_evt->iface, &msg);
+ }
+ 
+ esp_err_t esp_periph_send_cmd_from_isr(esp_periph_handle_t periph, int cmd, void *data, int data_len)
+ {
+     if (periph->on_evt == NULL) {
+         return ESP_FAIL;
+     }
+     audio_event_iface_msg_t msg;
+     msg.cmd = cmd;
+     msg.source = periph;
+     msg.source_type = periph->periph_id;
+     msg.data = (void *)data;
+     msg.data_len = data_len;
+     return audio_event_iface_cmd_from_isr(periph->on_evt->iface, &msg);
+ }
+ 
+ esp_err_t esp_periph_send_event(esp_periph_handle_t periph, int event_id, void *data, int data_len)
+ {
+     if (periph->on_evt == NULL) {
+         return ESP_FAIL;
+     }
+     audio_event_iface_msg_t msg;
+     msg.source_type = periph->periph_id;
+     msg.cmd = event_id;
+     msg.data = data;
+     msg.data_len = data_len;
+     msg.need_free_data = false;
+     msg.source = periph;
+ 
+     if (periph->on_evt->cb) {
+         periph->on_evt->cb(&msg, periph->on_evt->user_ctx);
+     }
+     return audio_event_iface_sendout(periph->on_evt->iface, &msg);
+ }
+ 
+ esp_err_t esp_periph_start_timer(esp_periph_handle_t periph, TickType_t interval_tick, timer_callback callback)
+ {
+     if (periph->timer == NULL) {
+         periph->timer = xTimerCreate("periph_itmer", interval_tick, pdTRUE, periph, callback);
+         if (xTimerStart(periph->timer, 0) != pdTRUE) {
+             AUDIO_ERROR(TAG, "Error to starting timer");
+             return ESP_FAIL;
+         }
+     }
+     return ESP_OK;
+ }
+ 
+ esp_err_t esp_periph_stop_timer(esp_periph_handle_t periph)
+ {
+     if (periph->timer) {
+         xTimerStop(periph->timer, portMAX_DELAY);
+         xTimerDelete(periph->timer, portMAX_DELAY);
+         periph->timer = NULL;
+     }
+     return ESP_OK;
+ }
+ 
+ esp_err_t esp_periph_set_data(esp_periph_handle_t periph, void *data)
+ {
+     periph->periph_data = data;
+     return ESP_OK;
+ }
+ 
+ void *esp_periph_get_data(esp_periph_handle_t periph)
+ {
+     return periph->periph_data;
+ }
+ 
+ esp_periph_state_t esp_periph_get_state(esp_periph_handle_t periph)
+ {
+     return periph->state;
+ }
+ 
+ esp_periph_id_t esp_periph_get_id(esp_periph_handle_t periph)
+ {
+     return periph->periph_id;
+ }
+ 
+ esp_err_t esp_periph_set_id(esp_periph_handle_t periph, esp_periph_id_t periph_id)
+ {
+     periph->periph_id = periph_id;
+     return ESP_OK;
+ }
+ 
+ esp_err_t esp_periph_init(esp_periph_handle_t periph)
+ {
+     return periph->init(periph);
+ }
+ 
+ esp_err_t esp_periph_run(esp_periph_handle_t periph)
+ {
+     return periph->run(periph, NULL);
+ }
+ 
+ esp_err_t esp_periph_destroy(esp_periph_handle_t periph)
+ {
+     return periph->destroy(periph);
+ }
+ 
+ esp_err_t esp_periph_register_on_events(esp_periph_handle_t periph, esp_periph_event_t *evts)
+ {
+     periph->on_evt = evts;
+     return ESP_OK;
  }

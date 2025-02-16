@@ -50,8 +50,8 @@
  #define PERIPH_ADC_BUTTON_DEFAULT_CONFIG() {   \
      .task_cfg = {                              \
          .task_stack = ADC_BUTTON_STACK_SIZE,   \
-         .task_prio  = ADC_BUTTON_TASK_PRIORITY,\
          .task_core  = ADC_BUTTON_TASK_CORE_ID, \
+         .task_prio  = ADC_BUTTON_TASK_PRIORITY,\
          .ext_stack  = false                    \
      }                                          \
  }
@@ -66,14 +66,14 @@
  
  /**
  * ESP32 ADC1 channels and GPIO table
- *   ADC1_CHANNEL_0 -  GPIO36
- *   ADC1_CHANNEL_1 -  GPIO37
- *   ADC1_CHANNEL_2 -  GPIO38
- *   ADC1_CHANNEL_3 -  GPIO39
- *   ADC1_CHANNEL_4 -  GPIO32
- *   ADC1_CHANNEL_5 -  GPIO33
- *   ADC1_CHANNEL_6 -  GPIO34
- *   ADC1_CHANNEL_7 -  GPIO35
+ *   ADC_CHANNEL_0 -  GPIO36
+ *   ADC_CHANNEL_1 -  GPIO37
+ *   ADC_CHANNEL_2 -  GPIO38
+ *   ADC_CHANNEL_3 -  GPIO39
+ *   ADC_CHANNEL_4 -  GPIO32
+ *   ADC_CHANNEL_5 -  GPIO33
+ *   ADC_CHANNEL_6 -  GPIO34
+ *   ADC_CHANNEL_7 -  GPIO35
  *
  **/
  

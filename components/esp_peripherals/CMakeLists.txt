@@ -61,7 +61,7 @@ list(APPEND COMPONENT_ADD_INCLUDEDIRS ./lib/sdcard)
 list(APPEND COMPONENT_SRCS ./lib/sdcard/sdcard.c ./periph_sdcard.c)
 ENDIF ()
 
-set(COMPONENT_REQUIRES driver audio_hal audio_sal fatfs console audio_pipeline audio_board spiffs display_service esp_dispatcher bt mbedtls wpa_supplicant nvs_flash)
+set(COMPONENT_REQUIRES esp_adc audio_hal audio_sal fatfs console audio_pipeline audio_board spiffs display_service esp_dispatcher bt mbedtls wpa_supplicant nvs_flash)
 
 IF (((IDF_VERSION_MAJOR EQUAL 4) AND (IDF_VERSION_MINOR GREATER 3)) OR (IDF_VERSION_MAJOR GREATER 4))
 list(APPEND COMPONENT_REQUIRES esp_lcd)

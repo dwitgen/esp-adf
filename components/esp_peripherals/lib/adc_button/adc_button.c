@@ -302,6 +302,7 @@
  void adc_init(adc_unit_t unit_id, adc_channel_t channel, adc_atten_t atten, adc_bitwidth_t bitwidth) {
      adc_oneshot_unit_init_cfg_t init_config = {
          .unit_id = unit_id,
+         .ulp_mode = ADC_ULP_MODE_DISABLE,
      };
      ESP_ERROR_CHECK(adc_oneshot_new_unit(&init_config, &adc1_handle));
      

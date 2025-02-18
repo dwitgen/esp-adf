@@ -35,7 +35,7 @@
  #endif
  
  #define ADC_BUTTON_STACK_SIZE           2500
- #define ADC_BUTTON_TASK_PRIORITY        10
+ #define ADC_BUTTON_TASK_PRIORITY        5
  #define ADC_BUTTON_TASK_CORE_ID         0
  
  /**

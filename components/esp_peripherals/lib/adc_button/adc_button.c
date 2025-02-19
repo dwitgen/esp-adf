@@ -146,20 +146,35 @@
      return ESP_OK;
  }
  
- static int get_button_id(adc_btn_list *node, int adc)
- {
-     int m = ADC_BTN_INVALID_ID;
-     adc_arr_t *info = &(node->adc_info);
-     for (int i = 0; i < info->total_steps; i++) {
-         ESP_LOGV(TAG, "max:%d, adc:%d, i:%d, %d, %d", info->total_steps, adc, i, info->adc_level_step[i], info->adc_level_step[i + 1]);
-         if ((adc > info->adc_level_step[i])
-             && (adc <= info->adc_level_step[i + 1])) {
-             m = i;
-             break;
-         }
-     }
-     return m;
- }
+ //static int get_button_id(adc_btn_list *node, int adc)
+ //{
+ //    int m = ADC_BTN_INVALID_ID;
+ //    adc_arr_t *info = &(node->adc_info);
+ //    for (int i = 0; i < info->total_steps; i++) {
+ //        ESP_LOGV(TAG, "max:%d, adc:%d, i:%d, %d, %d", info->total_steps, adc, i, info->adc_level_step[i], info->adc_level_step[i + 1]);
+ //        if ((adc > info->adc_level_step[i])
+ //            && (adc <= info->adc_level_step[i + 1])) {
+ //            m = i;
+ //            break;
+ //        }
+ //    }
+ //    return m;
+ //}
+
+static int get_button_id(adc_btn_list *node, int adc)
+{
+    int m = ADC_BTN_INVALID_ID;
+    adc_arr_t *info = &(node->adc_info);
+    for (int i = 0; i < info->total_steps; i++) {
+        ESP_LOGV(TAG, "Interval %d: %d < adc(%d) <= %d", i, info->adc_level_step[i], adc, info->adc_level_step[i + 1]);
+        if ((adc > info->adc_level_step[i]) && (adc <= info->adc_level_step[i + 1])) {
+            m = i;
+            break;
+        }
+    }
+    ESP_LOGD(TAG, "Raw ADC: %d -> Button index: %d", adc, m);
+    return m;
+}
  
  static void reset_btn(btn_decription *btn_dscp, int btn_num)
  {
@@ -421,7 +436,7 @@
      tag->head = head;
      tag->btn_callback = cb;
      tag->config = config;
-     
+
      g_event_bit = xEventGroupCreate();
  
      audio_thread_create(&tag->audio_thread,

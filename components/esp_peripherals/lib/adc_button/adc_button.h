@@ -30,6 +30,8 @@
  #endif
  
  #include "esp_err.h"
+ #include <esp_adc/adc_oneshot.h>
+ #include <esp_adc/adc_cali_scheme.h>
  
  typedef enum {
      USER_KEY_ID0,

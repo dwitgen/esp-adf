@@ -100,7 +100,7 @@
  
  #define DEFAULT_ESP_PERIPH_STACK_SIZE      (4*1024)
  #define DEFAULT_ESP_PERIPH_TASK_PRIO       (3)
- #define DEFAULT_ESP_PERIPH_TASK_CORE       (1)
+ #define DEFAULT_ESP_PERIPH_TASK_CORE       (0)
  
  #define DEFAULT_ESP_PERIPH_SET_CONFIG() {\
      .task_stack         = DEFAULT_ESP_PERIPH_STACK_SIZE,   \

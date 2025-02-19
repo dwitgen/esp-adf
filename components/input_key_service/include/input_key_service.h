@@ -37,7 +37,7 @@ extern "C" {
 
 #define INPUT_KEY_SERVICE_TASK_STACK_SIZE (3 * 1024)
 #define INPUT_KEY_SERVICE_TASK_PRIORITY   (5)
-#define INPUT_KEY_SERVICE_TASK_ON_CORE    (1)
+#define INPUT_KEY_SERVICE_TASK_ON_CORE    (0)
 
 /**
  * @brief input key action id

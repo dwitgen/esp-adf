@@ -427,6 +427,6 @@
                          task_cfg->task_stack,
                          task_cfg->task_prio,
                          task_cfg->ext_stack,
-                         1); //task_cfg->task_core);
+                         task_cfg->task_core);
  }
  

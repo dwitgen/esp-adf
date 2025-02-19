@@ -69,6 +69,13 @@
      btn_decription *btn_dscp;
      struct adc_btn *next;
  } adc_btn_list;
+
+ typedef struct {
+    adc_unit_t     unit;
+    adc_channel_t  channel;
+    adc_atten_t    atten;
+    adc_bitwidth_t bitwidth;
+} adc_btn_config_t;
  
  typedef struct {
      int task_stack;
@@ -79,7 +86,7 @@
  
  typedef void (*adc_button_callback) (void *user_data, int adc, int id, adc_btn_state_t state);
  
- void adc_btn_init(void *user_data, adc_button_callback cb, adc_btn_list *head, adc_btn_task_cfg_t *task_cfg);
+ void adc_btn_init(void *user_data, adc_button_callback cb, adc_btn_list *head, adc_btn_task_cfg_t *task_cfg, adc_btn_config_t config);
  
  adc_btn_list *adc_btn_create_list(adc_arr_t *adc_conf, int channels);
  

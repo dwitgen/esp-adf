@@ -69,6 +69,7 @@
      adc_btn_list *head;
      void *user_data;
      audio_thread_t audio_thread;
+     adc_btn_config_t config;
  } adc_btn_tag_t;
  
  static const int default_step_level[USER_KEY_MAX] = {0, 683, 1193, 1631, 2090, 2578, 3103};
@@ -326,7 +327,8 @@
      xEventGroupClearBits(g_event_bit, DESTROY_BIT);
  
      // ADC initialization
-     adc_init(ADC_UNIT_1, ADC_CHANNEL_7, ADC_ATTEN_DB_12, ADC_BITWIDTH_12);
+     adc_init(tag->config.unit, tag->config.channel,
+        tag->config.atten, tag->config.bitwidth);
  
      while (find) {
          adc_arr_t *info = &(find->adc_info);
@@ -408,7 +410,7 @@
      }
  }
  
- void adc_btn_init(void *user_data, adc_button_callback cb, adc_btn_list *head, adc_btn_task_cfg_t *task_cfg)
+ void adc_btn_init(void *user_data, adc_button_callback cb, adc_btn_list *head, adc_btn_task_cfg_t *task_cfg, adc_btn_config_t config)
  {
      adc_btn_tag_t *tag = audio_calloc(1, sizeof(adc_btn_tag_t));
      if (NULL == tag) {
@@ -418,7 +420,8 @@
      tag->user_data = user_data;
      tag->head = head;
      tag->btn_callback = cb;
- 
+     tag->config = config;
+     
      g_event_bit = xEventGroupCreate();
  
      audio_thread_create(&tag->audio_thread,

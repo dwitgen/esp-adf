@@ -42,20 +42,26 @@
   * @brief      The configuration of ADC Button
   */
  typedef struct {
-     adc_arr_t *arr;  /*!< An array with configuration of buttons */
-     int arr_size;    /*!< The array size */
-     adc_btn_task_cfg_t task_cfg; /*!< Adc button task configuration */
- } periph_adc_button_cfg_t;
+    adc_arr_t *arr;              /*!< An array with configuration of buttons */
+    int arr_size;                /*!< The array size */
+    adc_btn_task_cfg_t task_cfg; /*!< Adc button task configuration */
+    adc_btn_config_t adc_config;     /*!< ADC button dynamic configuration */
+} periph_adc_button_cfg_t;
  
- #define PERIPH_ADC_BUTTON_DEFAULT_CONFIG() {   \
-     .task_cfg = {                              \
-         .task_stack = ADC_BUTTON_STACK_SIZE,   \
-         .task_core  = ADC_BUTTON_TASK_CORE_ID, \
-         .task_prio  = ADC_BUTTON_TASK_PRIORITY,\
-         .ext_stack  = false                    \
-     }                                          \
- }
- 
+#define PERIPH_ADC_BUTTON_DEFAULT_CONFIG() {           \
+    .task_cfg = {                                      \
+        .task_stack = ADC_BUTTON_STACK_SIZE,           \
+        .task_core  = ADC_BUTTON_TASK_CORE_ID,         \
+        .task_prio  = ADC_BUTTON_TASK_PRIORITY,        \
+        .ext_stack  = false                             \
+    },                                                 \
+    .adc_config = {                                        \
+        .unit     = ADC_UNIT_1,                        \
+        .channel  = ADC_CHANNEL_3,                     \
+        .atten    = AADC_ATTEN_DB_12,                     \
+        .bitwidth = ADC_BITWIDTH_12                    \
+    }                                                  \
+}
  typedef enum {
      PERIPH_ADC_BUTTON_IDLE = 0,
      PERIPH_ADC_BUTTON_PRESSED,

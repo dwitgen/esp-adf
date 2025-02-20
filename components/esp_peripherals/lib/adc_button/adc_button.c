@@ -49,7 +49,7 @@
  #define V_REF                           1100
  
  #define ADC_SAMPLES_NUM                 10
- #define ADC_SAMPLE_INTERVAL_TIME_MS     20
+ #define ADC_SAMPLE_INTERVAL_TIME_MS     500
  #define DIAL_VOL_INTERVAL_TIME_MS       150
  
  #define ADC_BTN_INVALID_ID              -1

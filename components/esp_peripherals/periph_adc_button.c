@@ -63,7 +63,7 @@
      return ESP_OK;
  }
  
- static esp_err_t _adc_button_init(esp_periph_handle_t self)
+static esp_err_t _adc_button_init(esp_periph_handle_t self)
 {
     periph_adc_btn_t *periph_adc_btn = esp_periph_get_data(self);
     adc_btn_init((void *)self, btn_cb, periph_adc_btn->list, 

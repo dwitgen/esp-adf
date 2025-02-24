@@ -66,7 +66,7 @@ typedef struct {
 typedef struct {
     i2c_master_bus_handle_t      master_handle;
     int                          ref_count;
-    xSemaphoreHandle             bus_lock;
+    SemaphoreHandle_t            bus_lock;
     SLIST_HEAD( ,i2c_dev_info_s) dev_lists;
 } i2c_master_info_t;
  
